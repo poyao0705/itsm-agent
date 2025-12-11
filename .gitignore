@@ -114,3 +114,7 @@ venv.bak/
 # midgy
 .midgy
 
+# Database
+*.db
+*.sqlite
+*.sqlite3
