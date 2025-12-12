@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()  # Load .env variables into os.environ for libraries (LangSmith, etc.)
+
 from fastapi import FastAPI
 
 from app.routers import home
