@@ -6,7 +6,11 @@ from sqlalchemy import pool
 from alembic import context
 
 from sqlmodel import SQLModel
-from app.core.config import DATABASE_URL
+from app.core.config import settings
+
+# Import models so they are registered in SQLModel.metadata
+# When you add new models, import them in `app/models/__init__.py`
+from app import models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -22,7 +26,7 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 
 # Set the database URL from our config
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 
 def run_migrations_offline() -> None:
@@ -67,7 +71,9 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=config.get_main_option("sqlalchemy.url").startswith("sqlite"),
+            render_as_batch=config.get_main_option("sqlalchemy.url").startswith(
+                "sqlite"
+            ),
         )
 
         with context.begin_transaction():
