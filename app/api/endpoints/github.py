@@ -8,7 +8,16 @@ router = APIRouter()
 
 @router.post("/webhook")  # Standard path naming
 async def handle_github_webhook(request: Request, x_github_event: str = Header(...)):
-    # GitHub sends webhooks as form-encoded data with a 'payload' field containing URL-encoded JSON
+    """
+    Handle GitHub webhook requests.
+
+    Args:
+        request: The incoming HTTP request.
+        x_github_event: The GitHub event type (e.g., 'push', 'pull_request').
+
+    Returns:
+        A JSON response indicating the webhook was received.
+    """
     try:
         form_data = await request.form()
         if "payload" in form_data:
