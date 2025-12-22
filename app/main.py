@@ -2,13 +2,14 @@ from dotenv import load_dotenv
 
 
 from fastapi import FastAPI
+from app.db.database import lifespan
 
 from app.api.api_v1 import router as api_v1
 
 load_dotenv()  # Load .env variables into os.environ for libraries (LangSmith, etc.)
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
