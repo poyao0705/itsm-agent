@@ -29,6 +29,23 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 
 
+def render_item(type_: str, obj, autogen_context):
+    """
+    Custom render function to convert SQLModel types to standard SQLAlchemy types.
+
+    This avoids the 'sqlmodel not defined' error in generated migrations by
+    converting sqlmodel.sql.sqltypes.AutoString to sa.String().
+    """
+    if type_ == "type":
+        from sqlmodel.sql.sqltypes import AutoString
+
+        if isinstance(obj, AutoString):
+            # Return standard SQLAlchemy String instead of SQLModel's AutoString
+            return "sa.String()"
+    # Return False to use default rendering for other types
+    return False
+
+
 # Set the database URL from our config
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -48,6 +65,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_item=render_item,
     )
 
     with context.begin_transaction():
@@ -55,7 +73,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_item=render_item,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
