@@ -55,36 +55,3 @@ def node_analyze_jira_ticket_number(state: AgentState) -> AgentState:
     """
 
     return state
-
-
-# from langgraph.types import Command, interrupt
-# from langgraph.graph import END, START, StateGraph
-
-# from app.services.change_management.utils.schemas import TicketTrackingResult
-
-
-# class TicketTrackingNode(BaseNode):
-#     """
-#     Node to track the ticket number in the PR body.
-#     """
-
-#     def run(self, pr_body: str) -> TicketTrackingResult:
-#         """
-#         Run the node to track the ticket number in the PR body.
-#         """
-#         return TicketTrackingResult(
-#             ticket_number="", ticket_url="", ticket_status="NOT_FOUND"
-#         )
-
-
-# @dataclass(frozen=True)
-# class Deps:
-#     """
-#     Dependencies for the nodes.
-#     """
-
-#     # jira_client: JiraClient
-#     github_client: GithubClient,
-
-#     # llm: LLM
-#     # config: Config
