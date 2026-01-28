@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # AI / Model Providers
     OPENAI_API_KEY: str
 
+    # Integrations
+    GITHUB_TOKEN: Optional[str] = None  # GitHub API token for PR evidence (e.g. from .env)
+
     model_config = SettingsConfigDict(
         env_file=".env", env_ignore_empty=True, extra="ignore"
     )

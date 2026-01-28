@@ -3,6 +3,8 @@ import json
 from urllib.parse import unquote
 from fastapi import APIRouter, Header, Request
 
+from app.services.change_management.agent import change_management_graph
+
 router = APIRouter()
 
 
@@ -39,7 +41,12 @@ async def handle_github_webhook(request: Request, x_github_event: str = Header(.
         except Exception:
             payload = {"error": f"Failed to parse request: {str(e)}"}
 
-    # Logic here
-    print(f"GitHub webhook received: {payload}")
-    print(f"GitHub event: {x_github_event}")
-    return {"message": "GitHub webhook received"}
+    # Process pull_request events through the Change Management agent
+    if x_github_event == "pull_request":
+        result = await change_management_graph.ainvoke({"webhook_payload": payload})
+        return {"message": "PR processed", "state": result}
+
+    # Log and ignore other events
+    print(f"GitHub webhook received: {x_github_event}")
+    # print(f"Payload: {payload}")
+    return {"message": "Event ignored", "event": x_github_event}
