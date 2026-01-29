@@ -10,8 +10,37 @@ REST is chosen over GraphQL because:
 
 import asyncio
 import hashlib
+import time
 from typing import Dict, List, Optional, Any
+
 import httpx
+import jwt
+import cryptography
+
+from app.core.config import settings
+
+
+async def get_access_token(installation_id: int) -> str:
+    """Exchanges Private Key + Installation ID for a temporary Token"""
+    # Create the JWT (The "ID Badge" for the App)
+    payload = {
+        "iat": int(time.time()) - 60,
+        "exp": int(time.time()) + (10 * 60),
+        "iss": settings.GITHUB_APP_ID,
+    }
+    jwt_token = jwt.encode(payload, settings.GITHUB_APP_PRIVATE_KEY, algorithm="RS256")
+
+    # Request the Token from GitHub
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"https://api.github.com/app/installations/{installation_id}/access_tokens",
+            headers={
+                "Authorization": f"Bearer {jwt_token}",
+                "Accept": "application/vnd.github+json",
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()["token"]
 
 
 class GitHubClient:
@@ -171,3 +200,17 @@ class GitHubClient:
             result["diff"] = await self.get_pr_diff(owner, repo, pr_number)
 
         return result
+
+    async def post_pr_comment(
+        self, owner: str, repo: str, pr_number: int, comment: str
+    ) -> None:
+        """
+        Post a comment on the PR.
+        """
+        url = f"{self.base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url, headers=self.headers, json={"body": comment}
+            )
+            response.raise_for_status()

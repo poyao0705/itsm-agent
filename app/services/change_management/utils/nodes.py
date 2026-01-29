@@ -1,8 +1,10 @@
 import re
 from app.services.change_management.utils.schemas import AnalysisResult
 from app.services.change_management.utils.schemas import AgentState
-from app.services.change_management.utils.github_client import GitHubClient
-from app.core.config import settings
+from app.services.change_management.utils.github_client import (
+    GitHubClient,
+    get_access_token,
+)
 
 
 async def node_read_pr_from_webhook(state: AgentState) -> AgentState:
@@ -25,6 +27,7 @@ async def node_read_pr_from_webhook(state: AgentState) -> AgentState:
     repo = repo_data.get("name", "")
     pr_number = int(pr_data.get("number", 0))
     pr_url = pr_data.get("html_url", "")
+    installation_id = payload.get("installation", {}).get("id")
 
     if not pr_number:
         return {}
@@ -34,6 +37,7 @@ async def node_read_pr_from_webhook(state: AgentState) -> AgentState:
         "repo": repo,
         "pr_number": pr_number,
         "pr_url": pr_url,
+        "installation_id": installation_id,
     }
 
 
@@ -41,7 +45,19 @@ async def node_fetch_pr_info(state: AgentState) -> AgentState:
     """
     Fetch PR info via GitHub API and store in pr_evidence.
     """
-    pr_info = await GitHubClient(settings.GITHUB_TOKEN).fetch_pr_info(
+    if not state.owner or not state.repo or not state.pr_number:
+        print("Missing required PR identifiers, skipping fetch.")
+        return {}
+
+    # Use the installation token if available
+    token = None
+    if state.installation_id:
+        try:
+            token = await get_access_token(state.installation_id)
+        except Exception as e:
+            print(f"Failed to get installation token: {e}")
+
+    pr_info = await GitHubClient(token).fetch_pr_info(
         state.owner, state.repo, state.pr_number, include_diff=True
     )
     return {"pr_info": pr_info}
@@ -51,6 +67,10 @@ def node_analyze_jira_ticket_number(state: AgentState) -> AgentState:
     """
     Node to analyze the JIRA ticket number in the PR.
     """
+    if not state.pr_info:
+        print("Missing pr_info, skipping JIRA analysis.")
+        return {}
+
     pr_info = state.pr_info or {}
     pr_title = pr_info.get("pr_title", "")
 
@@ -70,3 +90,32 @@ def node_analyze_jira_ticket_number(state: AgentState) -> AgentState:
     )
 
     return {"analysis_results": [analysis_result]}
+
+
+async def node_post_pr_comment(state: AgentState) -> AgentState:
+    """
+    Node to post a comment on the PR.
+    """
+    pr_info = state.pr_info or {}
+    pr_url = pr_info.get("pr_url", "")
+    analysis_results = state.analysis_results or []
+
+    comment = "\n".join([res.summary for res in analysis_results])
+
+    # We want to post a comment.
+    if state.installation_id:
+        try:
+            token = await get_access_token(state.installation_id)
+
+            client = GitHubClient(token)
+            await client.post_pr_comment(
+                state.owner,
+                state.repo,
+                state.pr_number,
+                comment,
+            )
+            return {"pr_url": pr_url, "comment": "Commented on PR"}
+        except Exception as e:
+            return {"pr_url": pr_url, "comment": f"Failed to comment: {e}"}
+
+    return {"pr_url": pr_url, "comment": "No installation ID, skipped comment"}

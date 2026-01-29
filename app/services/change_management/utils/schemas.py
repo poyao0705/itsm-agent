@@ -62,6 +62,9 @@ class AgentState(BaseModel):
     risk_level: Literal["LOW", "HIGH", "UNKNOWN"] = Field(
         default="UNKNOWN", description="The risk level of the PR."
     )
+    installation_id: Optional[int] = Field(
+        default=None, description="The GitHub App installation ID."
+    )
     analysis_results: Annotated[List[AnalysisResult], operator.add] = Field(
         default_factory=list, description="The analysis results of the agent."
     )

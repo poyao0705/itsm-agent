@@ -9,9 +9,10 @@ Attributes:
     settings: The global instance of the Settings class, ready to be imported and used.
 """
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
 import os
+from typing import Optional
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -34,8 +35,22 @@ class Settings(BaseSettings):
     # AI / Model Providers
     OPENAI_API_KEY: str
 
-    # Integrations
-    GITHUB_TOKEN: Optional[str] = None  # GitHub API token for PR evidence (e.g. from .env)
+    # Github
+    GITHUB_APP_ID: str
+    GITHUB_APP_PRIVATE_KEY: str
+
+    @field_validator("GITHUB_APP_PRIVATE_KEY", mode="after")
+    @classmethod
+    def load_private_key(cls, v: str) -> str:
+        """
+        Loads the private key content.
+        If the value is a file path, reads the file.
+        Also handles escaped newlines (\\n) in environment variables.
+        """
+        if os.path.isfile(v):
+            with open(v, "r", encoding="utf-8") as f:
+                return f.read()
+        return v.replace("\\n", "\n")
 
     model_config = SettingsConfigDict(
         env_file=".env", env_ignore_empty=True, extra="ignore"

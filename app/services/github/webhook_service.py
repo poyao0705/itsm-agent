@@ -2,7 +2,6 @@
 
 import json
 import logging
-from urllib.parse import unquote
 import pprint
 
 from starlette.requests import Request
@@ -16,26 +15,39 @@ async def parse_webhook_payload(request: Request) -> dict:
     """
     Extract and parse the webhook payload from a GitHub webhook request.
 
-    Tries form data with a "payload" field (URL-decoded JSON), then falls back
-    to raw JSON body if form parsing fails.
+    Tries:
+    1. JSON body (default for application/json)
+    2. Form data with "payload" field (application/x-www-form-urlencoded)
+    3. Raw form data
 
     Returns:
-        Parsed payload dict, or a dict with "raw_payload"/"error" on failure.
+        Parsed payload dict.
     """
-    try:
-        form_data = await request.form()
-        if "payload" in form_data:
-            payload_str = unquote(form_data["payload"])
-            try:
-                return json.loads(payload_str)
-            except json.JSONDecodeError:
-                return {"raw_payload": payload_str}
-        return dict(form_data) if form_data else {}
-    except Exception as e:
+    content_type = request.headers.get("content-type", "")
+
+    if "application/json" in content_type:
         try:
-            body = await request.body()
-            return json.loads(body) if body else {}
-        except Exception:
+            return await request.json()
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON body"}
+
+    if "application/x-www-form-urlencoded" in content_type:
+        try:
+            form_data = await request.form()
+            if "payload" in form_data:
+                return json.loads(form_data["payload"])
+            return dict(form_data)
+        except Exception as e:
+            return {"error": f"Failed to parse form data: {str(e)}"}
+
+    # Fallback: try JSON anyway, then form
+    try:
+        return await request.json()
+    except Exception:
+        try:
+            form_data = await request.form()
+            return dict(form_data) if form_data else {}
+        except Exception as e:
             return {"error": f"Failed to parse request: {str(e)}"}
 
 
@@ -55,16 +67,21 @@ async def handle_github_webhook(request: Request, event_type: str) -> dict:
     """
     payload = await parse_webhook_payload(request)
 
+    if event_type == "ping":
+        return {"message": "Pong!"}
+
     if event_type == "pull_request":
-        # Exclude pr merge actions
+        logger.info("Processing pull_request event: %s", payload.get("action"))
         action = payload.get("action")
+
+        # Exclude pr merge actions
         is_merged = payload.get("pull_request", {}).get("merged", False)
         if action == "closed" and is_merged:
             return {"message": "PR merged, ignored"}
 
         result = await change_management_graph.ainvoke({"webhook_payload": payload})
         # print the final state
-        pprint.pprint(result)
+        # pprint.pprint(result)
         return {"message": "PR processed", "state": result}
 
     logger.info("GitHub webhook received: %s", event_type)

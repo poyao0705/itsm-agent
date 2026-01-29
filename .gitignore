@@ -118,3 +118,6 @@ venv.bak/
 *.db
 *.sqlite
 *.sqlite3
+
+# Private key
+*.pem
