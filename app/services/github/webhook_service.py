@@ -56,6 +56,12 @@ async def handle_github_webhook(request: Request, event_type: str) -> dict:
     payload = await parse_webhook_payload(request)
 
     if event_type == "pull_request":
+        # Exclude pr merge actions
+        action = payload.get("action")
+        is_merged = payload.get("pull_request", {}).get("merged", False)
+        if action == "closed" and is_merged:
+            return {"message": "PR merged, ignored"}
+
         result = await change_management_graph.ainvoke({"webhook_payload": payload})
         # print the final state
         pprint.pprint(result)
