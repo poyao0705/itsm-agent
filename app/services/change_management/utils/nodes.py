@@ -1,3 +1,5 @@
+import re
+from app.services.change_management.utils.schemas import AnalysisResult
 from app.services.change_management.utils.schemas import AgentState
 from app.services.change_management.utils.github_client import GitHubClient
 from app.core.config import settings
@@ -42,7 +44,6 @@ async def node_fetch_pr_info(state: AgentState) -> AgentState:
     pr_info = await GitHubClient(settings.GITHUB_TOKEN).fetch_pr_info(
         state.owner, state.repo, state.pr_number, include_diff=True
     )
-    print("node_fetch_pr_info pr_info:", pr_info)
     return {"pr_info": pr_info}
 
 
@@ -50,5 +51,22 @@ def node_analyze_jira_ticket_number(state: AgentState) -> AgentState:
     """
     Node to analyze the JIRA ticket number in the PR.
     """
+    pr_info = state.pr_info or {}
+    pr_title = pr_info.get("pr_title", "")
 
-    return state
+    # Regex to extract PR title JIRA ticket number -- Pattern: ABCD-1234
+    # Multiple characters + hyphen + multiple digits
+    match = re.search(r"([A-Z]+-\d+)", pr_title)
+
+    if match:
+        return {"jira_ticket_number": match.group(1)}
+
+    analysis_result = AnalysisResult(
+        run_id=state.run_id,
+        node_name="node_analyze_jira_ticket_number",
+        reason_code="JIRA_TICKET_NUMBER_NOT_FOUND",
+        summary="JIRA ticket number not found in PR title.",
+        details={"pr_title": pr_title},
+    )
+
+    return {"analysis_results": [analysis_result]}

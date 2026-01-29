@@ -3,6 +3,7 @@
 import json
 import logging
 from urllib.parse import unquote
+import pprint
 
 from starlette.requests import Request
 
@@ -56,6 +57,8 @@ async def handle_github_webhook(request: Request, event_type: str) -> dict:
 
     if event_type == "pull_request":
         result = await change_management_graph.ainvoke({"webhook_payload": payload})
+        # print the final state
+        pprint.pprint(result)
         return {"message": "PR processed", "state": result}
 
     logger.info("GitHub webhook received: %s", event_type)

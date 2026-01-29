@@ -37,6 +37,9 @@ class AgentState(BaseModel):
     State of the Change Management Agent.
     """
 
+    run_id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()), description="The id of the run."
+    )
     webhook_payload: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Raw webhook payload from GitHub (pull_request event).",
@@ -51,7 +54,10 @@ class AgentState(BaseModel):
     )
     pr_info: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="PR evidence from GitHub API (title, body, changed_files, etc.).",
+        description="PR info from GitHub API (title, body, changed_files, etc.).",
+    )
+    jira_ticket_number: Optional[str] = Field(
+        default=None, description="The JIRA ticket number of the PR."
     )
     risk_level: Literal["LOW", "HIGH", "UNKNOWN"] = Field(
         default="UNKNOWN", description="The risk level of the PR."
