@@ -1,4 +1,20 @@
 services:
+  backend:
+    build: .
+    container_name: itsm_agent_backend
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - GITHUB_APP_PRIVATE_KEY=/app/private-key.pem
+    volumes:
+      - ./${GITHUB_APP_PRIVATE_KEY}:/app/private-key.pem
+    restart: unless-stopped
+
   db:
     image: postgres:18-alpine
     container_name: itsm_agent_postgres_db
