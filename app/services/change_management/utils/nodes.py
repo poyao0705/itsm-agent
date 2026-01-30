@@ -119,3 +119,12 @@ async def node_post_pr_comment(state: AgentState) -> AgentState:
             return {"pr_url": pr_url, "comment": f"Failed to comment: {e}"}
 
     return {"pr_url": pr_url, "comment": "No installation ID, skipped comment"}
+
+
+# Node to analyze code diff and give a risk level
+async def node_analyze_code_diff_hard(state: AgentState) -> AgentState:
+    """
+    Node to analyze code diff and give a risk level based on the hard gate.
+    """
+
+    pass
