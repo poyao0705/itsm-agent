@@ -1,9 +1,20 @@
+"""
+Node implementations for the Change Management Agent.
+"""
+
 import re
+import fnmatch
+import os
 from app.services.change_management.utils.schemas import AnalysisResult
 from app.services.change_management.utils.schemas import AgentState
 from app.services.change_management.utils.github_client import (
     GitHubClient,
     get_access_token,
+)
+
+from app.services.change_management.utils.yaml_utils import (
+    load_policy,
+    get_change_rules,
 )
 
 
@@ -85,7 +96,7 @@ def node_analyze_jira_ticket_number(state: AgentState) -> AgentState:
         run_id=state.run_id,
         node_name="node_analyze_jira_ticket_number",
         reason_code="JIRA_TICKET_NUMBER_NOT_FOUND",
-        summary="JIRA ticket number not found in PR title.",
+        summary="[BLOCKER] JIRA ticket number not found in PR title.",
         details={"pr_title": pr_title},
     )
 
@@ -122,9 +133,60 @@ async def node_post_pr_comment(state: AgentState) -> AgentState:
 
 
 # Node to analyze code diff and give a risk level
-async def node_analyze_code_diff_hard(state: AgentState) -> AgentState:
+def node_analyze_code_diff_hard(state: AgentState) -> AgentState:
     """
     Node to analyze code diff and give a risk level based on the hard gate.
     """
+    pr_info = state.pr_info or {}
+    changed_files = pr_info.get("changed_files", [])
 
-    pass
+    if not changed_files:
+        print("No changed files to analyze.")
+        return {}
+
+    # Load Policy
+    try:
+        policy_path = os.path.join(os.getcwd(), "docs/policy.yaml")
+        policy = load_policy(policy_path)
+        rules = get_change_rules(policy, excluded_risk_levels=["LOW"])
+    except Exception as e:
+        print(f"Failed to load policy: {e}")
+        return {}
+
+    # Check for HIGH risk matches
+    matched_rules = []
+
+    for file_obj in changed_files:
+        path = file_obj.get("path", "")
+        for rule in rules:
+            for pattern in rule.path_patterns:
+                if fnmatch.fnmatch(path, pattern):
+                    matched_rules.append((path, rule))
+
+    if matched_rules:
+        # Deduplicate, formatted for details
+        unique_matches = []
+        seen = set()
+        for path, rule in matched_rules:
+            key = (path, rule.id)
+            if key not in seen:
+                unique_matches.append(
+                    {"file": path, "rule_id": rule.id, "rule_desc": rule.description}
+                )
+                seen.add(key)
+        # New line for each file
+        unique_file_paths = sorted(list(set(m["file"] for m in unique_matches)))
+        files_str = "\n".join([f"- {f}" for f in unique_file_paths])
+        summary = f"Detected HIGH risk changes based on policy. Matched {len(unique_file_paths)} files. \nFiles:\n{files_str}"
+
+        result = AnalysisResult(
+            run_id=state.run_id,
+            node_name="node_analyze_code_diff_hard",
+            reason_code="HARD_GATE_HIGH_RISK",
+            summary="[HIGH RISK] " + summary,
+            details={"matched_files": unique_matches},
+        )
+
+        return {"risk_level": "HIGH", "analysis_results": [result]}
+
+    return {"risk_level": "UNKNOWN"}

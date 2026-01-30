@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
-from typing import Literal, Optional, List, Annotated, Dict, Any
+from typing import Literal, Optional, List, Annotated, Dict, Any, Tuple
 import operator
 import uuid
 
@@ -67,4 +67,22 @@ class AgentState(BaseModel):
     )
     analysis_results: Annotated[List[AnalysisResult], operator.add] = Field(
         default_factory=list, description="The analysis results of the agent."
+    )
+
+
+class ChangeTypeRule(BaseModel):
+    """
+    Rule for a specific change type.
+    """
+
+    id: str = Field(description="The id of the change type.")
+    description: str = Field(description="The description of the change type.")
+    path_patterns: Tuple[str, ...] = Field(
+        default_factory=tuple, description="The path patterns of the change type."
+    )
+    services: Tuple[Any, ...] = Field(
+        default_factory=tuple, description="The services of the change type."
+    )
+    analysis: Optional[Dict[str, Any]] = Field(
+        default=None, description="The analysis of the change type."
     )
