@@ -45,7 +45,7 @@ risk_levels:
           - ".env"
           - ".env.example"
 
-      tier1_services:
+      tier_1_services:
         description: "Tier 1 (mission critical) service changes"
         services:
           payment-service:
