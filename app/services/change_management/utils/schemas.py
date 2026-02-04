@@ -80,8 +80,8 @@ class ChangeTypeRule(BaseModel):
     path_patterns: Tuple[str, ...] = Field(
         default_factory=tuple, description="The path patterns of the change type."
     )
-    services: Tuple[Any, ...] = Field(
-        default_factory=tuple, description="The services of the change type."
+    services: Dict[str, Any] = Field(
+        default_factory=dict, description="The services of the change type."
     )
     analysis: Optional[Dict[str, Any]] = Field(
         default=None, description="The analysis of the change type."

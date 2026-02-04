@@ -2,7 +2,6 @@
 
 import json
 import logging
-import pprint
 
 from starlette.requests import Request
 
@@ -30,25 +29,6 @@ async def parse_webhook_payload(request: Request) -> dict:
             return await request.json()
         except json.JSONDecodeError:
             return {"error": "Invalid JSON body"}
-
-    if "application/x-www-form-urlencoded" in content_type:
-        try:
-            form_data = await request.form()
-            if "payload" in form_data:
-                return json.loads(form_data["payload"])
-            return dict(form_data)
-        except Exception as e:
-            return {"error": f"Failed to parse form data: {str(e)}"}
-
-    # Fallback: try JSON anyway, then form
-    try:
-        return await request.json()
-    except Exception:
-        try:
-            form_data = await request.form()
-            return dict(form_data) if form_data else {}
-        except Exception as e:
-            return {"error": f"Failed to parse request: {str(e)}"}
 
 
 async def handle_github_webhook(request: Request, event_type: str) -> dict:

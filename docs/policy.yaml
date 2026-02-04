@@ -8,34 +8,34 @@ description: >
 risk_levels:
   LOW:
     description: "Low risk change"
-    change_types: []
+    change_types: {}
 
   HIGH:
     description: "High risk change"
     change_types:
-      - id: "db"
+      db:
         description: "Database changes"
         path_patterns:
           - "alembic/migrations/**"
           - "app/db/**"
           - "app/models/**"
 
-      - id: "config"
+      config:
         description: "Configuration changes"
         path_patterns:
           - "app/config/**"
 
-      - id: "auth"
+      auth:
         description: "Authentication changes"
         path_patterns:
           - "app/auth/**"
 
-      - id: "api"
+      api:
         description: "API changes"
         path_patterns:
           - "app/api/**"
 
-      - id: "infra"
+      infra:
         description: "Infrastructure changes"
         path_patterns:
           - "infra/**"
@@ -45,13 +45,18 @@ risk_levels:
           - ".env"
           - ".env.example"
 
-      - id: "tier0_services"
+      tier0_services:
         description: "Tier 0 service changes"
         services:
-          - id: "payment-service"
+          payment-service:
             description: "Payment service"
-          - id: "user-service"
+            path_patterns: []
+          auth-service:
+            description: "Authentication service"
+            path_patterns: []
+          user-service:
             description: "User service including registration, login, profile"
+            path_patterns: []
         analysis:
           method: "llm+greptile"
           effect: "warn_only"

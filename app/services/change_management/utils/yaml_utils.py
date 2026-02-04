@@ -47,11 +47,12 @@ def get_change_rules(
         if level_name in excluded_risk_levels:
             continue
 
-        change_types = level_data.get("change_types", [])
-        for rule_data in change_types:
+        change_types = level_data.get("change_types", {})
+        for rule_id, rule_data in change_types.items():
             try:
-                all_rules.append(ChangeTypeRule(**rule_data))
+                # Inject the key as 'id' since we moved to dict-based structure
+                all_rules.append(ChangeTypeRule(id=rule_id, **rule_data))
             except Exception as e:
-                print(f"Error parsing rule in level {level_name}: {e}")
+                print(f"Error parsing rule '{rule_id}' in level {level_name}: {e}")
 
     return all_rules
