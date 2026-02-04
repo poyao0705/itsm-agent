@@ -133,7 +133,7 @@ async def node_post_pr_comment(state: AgentState) -> AgentState:
 
 
 # Node to analyze code diff and give a risk level
-def node_analyze_code_diff_hard(state: AgentState) -> AgentState:
+def node_policy_rule_analysis(state: AgentState) -> AgentState:
     """
     Node to analyze code diff and give a risk level based on the hard gate.
     """
@@ -181,8 +181,8 @@ def node_analyze_code_diff_hard(state: AgentState) -> AgentState:
 
         result = AnalysisResult(
             run_id=state.run_id,
-            node_name="node_analyze_code_diff_hard",
-            reason_code="HARD_GATE_HIGH_RISK",
+            node_name="node_policy_rule_analysis",
+            reason_code="HIGH_RISK_RULES_MATCHED",
             summary="[HIGH RISK] " + summary,
             details={"matched_files": unique_matches},
         )
