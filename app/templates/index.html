@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to ITSM Agent{% endblock %}
+
+{% block content %}
+    <h1>Welcome to ITSM Agent</h1>
+    <p>This is a simple welcome template served with Jinja2 and HTMX.</p>
+    <p>
+        <button hx-get="/api/v1/health" hx-target="#health-check" class="px-4 py-2 font-semibold text-white bg-blue-500 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+            Check API Health
+        </button>
+    </p>
+    <div id="health-check" style="margin-top: 1rem; padding: 1rem; background-color: white; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+        <!-- Health status will be loaded here -->
+    </div>
+{% endblock %}
