@@ -47,9 +47,6 @@ async def handle_github_webhook(request: Request, event_type: str) -> dict:
     """
     payload = await parse_webhook_payload(request)
 
-    if event_type == "ping":
-        return {"message": "Pong!"}
-
     if event_type == "pull_request":
         logger.info("Processing pull_request event: %s", payload.get("action"))
         action = payload.get("action")
