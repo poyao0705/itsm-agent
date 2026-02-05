@@ -10,6 +10,15 @@ import uuid
 from app.db.models.analysis_result import AnalysisResult
 
 
+def merge_risk_level(left: str, right: str) -> str:
+    """
+    Reducer for risk_level. Returns the highest risk level.
+    Priority: HIGH > LOW > UNKNOWN
+    """
+    priorities = {"HIGH": 2, "LOW": 1, "UNKNOWN": 0}
+    return left if priorities.get(left, 0) > priorities.get(right, 0) else right
+
+
 class AgentState(SQLModel):
     """
     State of the Change Management Agent.
@@ -39,7 +48,7 @@ class AgentState(SQLModel):
     jira_ticket_number: Optional[str] = Field(
         default=None, description="The JIRA ticket number of the PR."
     )
-    risk_level: Literal["LOW", "HIGH", "UNKNOWN"] = Field(
+    risk_level: Annotated[Literal["LOW", "HIGH", "UNKNOWN"], merge_risk_level] = Field(
         default="UNKNOWN", description="The risk level of the PR."
     )
     installation_id: Optional[int] = Field(

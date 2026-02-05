@@ -38,11 +38,11 @@ def analyze_jira_ticket_number(state: AgentState) -> dict:
     analysis_result = AnalysisResult(
         node_name="analyze_jira_ticket_number",
         reason_code="JIRA_TICKET_NUMBER_NOT_FOUND",
-        summary="[BLOCKER] JIRA ticket number not found in PR title.",
+        summary="[HIGH RISK] JIRA ticket number not found in PR title.",
         details={"pr_title": pr_title},
     )
 
-    return {"analysis_results": [analysis_result]}
+    return {"risk_level": "HIGH", "analysis_results": [analysis_result]}
 
 
 def policy_rule_analysis(state: AgentState) -> dict:
