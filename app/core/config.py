@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     # Github
     GITHUB_APP_ID: str
     GITHUB_APP_PRIVATE_KEY: str
+    GITHUB_WEBHOOK_SECRET: str
 
     @field_validator("GITHUB_APP_PRIVATE_KEY", mode="after")
     @classmethod
