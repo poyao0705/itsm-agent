@@ -70,6 +70,10 @@ class EvaluationRun(SQLModel, table=True):
         default=EvaluationStatus.PROCESSING,
         description="Current status of the evaluation run.",
     )
+    risk_level: RiskLevel = Field(
+        default=RiskLevel.LOW,
+        description="The overall calculated risk level for this run.",
+    )
 
     # Relationships
     analysis_results: List["AnalysisResult"] = Relationship(

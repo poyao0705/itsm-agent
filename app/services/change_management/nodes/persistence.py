@@ -6,10 +6,10 @@ These nodes handle database operations for EvaluationRun and AnalysisResult.
 
 from datetime import datetime, timezone
 from typing import Optional
+from sqlmodel import select
 
 from app.db.session import AsyncSessionLocal
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
-from app.db.models.analysis_result import AnalysisResult
 from app.schemas.agent_state import AgentState
 
 
@@ -43,8 +43,6 @@ async def create_evaluation_run(state: AgentState) -> dict:
 
     async with AsyncSessionLocal() as session:
         # Check if evaluation already exists (idempotency)
-        from sqlmodel import select
-
         existing = await session.exec(
             select(EvaluationRun).where(EvaluationRun.evaluation_key == evaluation_key)
         )
@@ -80,7 +78,6 @@ async def finalize_evaluation_run(state: AgentState) -> dict:
         return {}
 
     async with AsyncSessionLocal() as session:
-        from sqlmodel import select
 
         # Fetch the evaluation run
         result = await session.exec(
@@ -100,6 +97,7 @@ async def finalize_evaluation_run(state: AgentState) -> dict:
 
         # Update evaluation run
         run.status = EvaluationStatus.DONE
+        run.risk_level = state.risk_level
         run.end_ts = datetime.now(timezone.utc)
 
         await session.commit()
