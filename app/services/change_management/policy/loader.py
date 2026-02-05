@@ -4,11 +4,13 @@ Policy loading utilities.
 
 from typing import Dict, Any, List
 
+from functools import lru_cache
 import yaml
 
 from app.schemas.change_type_rule import ChangeTypeRule
 
 
+@lru_cache(maxsize=1)
 def load_policy(policy_path: str) -> Dict[str, Any]:
     """
     Load policy from YAML file.
