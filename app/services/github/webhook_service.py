@@ -5,7 +5,7 @@ import logging
 
 from starlette.requests import Request
 
-from app.services.change_management.agent import change_management_graph
+from app.services.change_management.graph import change_management_graph
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,58 @@
+# Policy for deterministic change risk classification + ISO/IEC 20000 change-control checks.
+policy_version: "2026-01-30"
+policy_id: "iso20000-change-policy"
+owner: "platform-team"
+description: >
+  Deterministic + AI-assisted change risk classification + ISO/IEC 20000 change-control checks.
+
+risk_levels:
+  LOW:
+    description: "Low risk change"
+    change_types: {}
+
+  HIGH:
+    description: "High risk change"
+    change_types:
+      db:
+        description: "Database changes"
+        path_patterns:
+          - "alembic/migrations/**"
+          - "app/db/**"
+          - "app/models/**"
+
+      config:
+        description: "Configuration changes"
+        path_patterns:
+          - "app/config/**"
+
+      api:
+        description: "API changes"
+        path_patterns:
+          - "app/api/**"
+
+      infra:
+        description: "Infrastructure changes"
+        path_patterns:
+          - "infra/**"
+          - "Dockerfile"
+          - "docker-compose.yaml"
+          - ".dockerignore"
+          - ".env"
+          - ".env.example"
+
+      tier_1_services:
+        description: "Tier 1 (mission critical) service changes"
+        services:
+          payment-service:
+            description: "Payment service"
+            path_patterns: []
+          auth-service:
+            description: "Authentication service"
+            path_patterns:
+              - "app/auth/**"
+          user-service:
+            description: "User service including registration, login, profile"
+            path_patterns: []
+        analysis:
+          method: "llm+greptile"
+          effect: "warn_only"

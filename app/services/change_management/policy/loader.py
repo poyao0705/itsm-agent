@@ -1,12 +1,12 @@
 """
-Utility functions for handling YAML files.
+Policy loading utilities.
 """
 
 from typing import Dict, Any, List
 
 import yaml
 
-from app.services.change_management.utils.schemas import ChangeTypeRule
+from app.schemas.change_type_rule import ChangeTypeRule
 
 
 def load_policy(policy_path: str) -> Dict[str, Any]:

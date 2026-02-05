@@ -12,8 +12,8 @@ from alembic import context
 from app.core.config import settings
 
 # Import models so they are registered in SQLModel.metadata
-# When you add new models, import them in `app/models/__init__.py`
-from app import models
+# When you add new models, import them in `app/db/models/__init__.py`
+from app.db import models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -4,7 +4,7 @@ ITSM Agent Database Dependencies
 
 from typing import AsyncGenerator
 from sqlmodel.ext.asyncio.session import AsyncSession
-from app.db.database import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
