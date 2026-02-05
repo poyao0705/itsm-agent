@@ -121,3 +121,6 @@ venv.bak/
 
 # Private key
 *.pem
+
+# Agent
+.agent/
