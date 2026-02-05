@@ -25,11 +25,6 @@ risk_levels:
         path_patterns:
           - "app/config/**"
 
-      auth:
-        description: "Authentication changes"
-        path_patterns:
-          - "app/auth/**"
-
       api:
         description: "API changes"
         path_patterns:
@@ -53,7 +48,8 @@ risk_levels:
             path_patterns: []
           auth-service:
             description: "Authentication service"
-            path_patterns: []
+            path_patterns:
+              - "app/auth/**"
           user-service:
             description: "User service including registration, login, profile"
             path_patterns: []

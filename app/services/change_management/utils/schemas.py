@@ -76,6 +76,9 @@ class ChangeTypeRule(BaseModel):
     """
 
     id: str = Field(description="The id of the change type.")
+    risk_level: str = Field(
+        default="LOW", description="The risk level of the change type."
+    )
     description: str = Field(description="The description of the change type.")
     path_patterns: Tuple[str, ...] = Field(
         default_factory=tuple, description="The path patterns of the change type."

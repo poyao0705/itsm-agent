@@ -50,9 +50,26 @@ def get_change_rules(
         change_types = level_data.get("change_types", {})
         for rule_id, rule_data in change_types.items():
             try:
-                # Inject the key as 'id' since we moved to dict-based structure
-                all_rules.append(ChangeTypeRule(id=rule_id, **rule_data))
+                # Inject the key as 'id' and level_name as 'risk_level'
+                all_rules.append(
+                    ChangeTypeRule(id=rule_id, risk_level=level_name, **rule_data)
+                )
             except Exception as e:
                 print(f"Error parsing rule '{rule_id}' in level {level_name}: {e}")
 
     return all_rules
+
+
+def get_risk_priority(policy: Dict[str, Any]) -> Dict[str, int]:
+    """
+    Derive risk level priority from the order in the policy YAML.
+    Earlier keys = lower priority, later keys = higher priority.
+
+    Args:
+        policy: The policy dictionary.
+
+    Returns:
+        Dict mapping risk level names to priority integers.
+    """
+    risk_levels = list(policy.get("risk_levels", {}).keys())
+    return {level: i for i, level in enumerate(risk_levels)}

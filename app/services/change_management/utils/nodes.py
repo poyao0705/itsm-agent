@@ -15,6 +15,7 @@ from app.services.change_management.utils.github_client import (
 from app.services.change_management.utils.yaml_utils import (
     load_policy,
     get_change_rules,
+    get_risk_priority,
 )
 
 
@@ -132,10 +133,9 @@ async def node_post_pr_comment(state: AgentState) -> AgentState:
     return {"pr_url": pr_url, "comment": "No installation ID, skipped comment"}
 
 
-# Node to analyze code diff and give a risk level
 def node_policy_rule_analysis(state: AgentState) -> AgentState:
     """
-    Node to analyze code diff and give a risk level based on the hard gate.
+    Analyze code diff and give a risk level based on policy rules.
     """
     pr_info = state.pr_info or {}
     changed_files = pr_info.get("changed_files", [])
@@ -149,44 +149,50 @@ def node_policy_rule_analysis(state: AgentState) -> AgentState:
         policy_path = os.path.join(os.getcwd(), "docs/policy.yaml")
         policy = load_policy(policy_path)
         rules = get_change_rules(policy, excluded_risk_levels=["LOW"])
+        risk_priority = get_risk_priority(policy)
     except Exception as e:
         print(f"Failed to load policy: {e}")
         return {}
 
-    # Check for HIGH risk matches
-    matched_rules = []
+    # Match files against rules (single pass with inline deduplication)
+    unique_matches = []
+    seen = set()
 
     for file_obj in changed_files:
         path = file_obj.get("path", "")
         for rule in rules:
-            for pattern in rule.path_patterns:
-                if fnmatch.fnmatch(path, pattern):
-                    matched_rules.append((path, rule))
+            if any(fnmatch.fnmatch(path, p) for p in rule.path_patterns):
+                key = (path, rule.id)
+                if key not in seen:
+                    seen.add(key)
+                    unique_matches.append(
+                        {
+                            "file": path,
+                            "rule_id": rule.id,
+                            "rule_desc": rule.description,
+                            "risk_level": rule.risk_level,
+                        }
+                    )
 
-    if matched_rules:
-        # Deduplicate, formatted for details
-        unique_matches = []
-        seen = set()
-        for path, rule in matched_rules:
-            key = (path, rule.id)
-            if key not in seen:
-                unique_matches.append(
-                    {"file": path, "rule_id": rule.id, "rule_desc": rule.description}
-                )
-                seen.add(key)
-        # New line for each file
-        unique_file_paths = sorted(list(set(m["file"] for m in unique_matches)))
-        files_str = "\n".join([f"- {f}" for f in unique_file_paths])
-        summary = f"Detected HIGH risk changes based on policy. Matched {len(unique_file_paths)} files. \nFiles:\n{files_str}"
+    if not unique_matches:
+        return {"risk_level": "UNKNOWN"}
 
-        result = AnalysisResult(
+    # Create one AnalysisResult per match
+    results = [
+        AnalysisResult(
             run_id=state.run_id,
             node_name="node_policy_rule_analysis",
-            reason_code="HIGH_RISK_RULES_MATCHED",
-            summary="[HIGH RISK] " + summary,
-            details={"matched_files": unique_matches},
+            reason_code=f"{m['risk_level']}_RISK_RULES_MATCHED",
+            summary=f"[{m['risk_level']} RISK] {m['file']}: {m['rule_desc']}",
+            details={"matched_file": m},
         )
+        for m in unique_matches
+    ]
 
-        return {"risk_level": "HIGH", "analysis_results": [result]}
+    # Determine overall risk (highest priority wins, based on YAML order)
+    overall_risk = max(
+        (m["risk_level"] for m in unique_matches),
+        key=lambda r: risk_priority.get(r, -1),
+    )
 
-    return {"risk_level": "UNKNOWN"}
+    return {"risk_level": overall_risk, "analysis_results": results}
