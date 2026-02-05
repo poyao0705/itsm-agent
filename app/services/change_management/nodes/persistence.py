@@ -7,8 +7,8 @@ These nodes handle database operations for EvaluationRun and AnalysisResult.
 from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import select
+from langchain_core.runnables import RunnableConfig
 
-from app.db.session import AsyncSessionLocal
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
 from app.schemas.agent_state import AgentState
 
@@ -29,7 +29,7 @@ def build_evaluation_key(state: AgentState) -> Optional[str]:
     return f"{state.owner}/{state.repo}:{state.pr_number}:{head_sha}:{body_hash}"
 
 
-async def create_evaluation_run(state: AgentState) -> dict:
+async def create_evaluation_run(state: AgentState, config: RunnableConfig) -> dict:
     """
     Create an EvaluationRun record at the start of the workflow.
 
@@ -41,31 +41,32 @@ async def create_evaluation_run(state: AgentState) -> dict:
         print("Cannot create evaluation run: missing required state fields")
         return {}
 
-    async with AsyncSessionLocal() as session:
-        # Check if evaluation already exists (idempotency)
-        existing = await session.exec(
-            select(EvaluationRun).where(EvaluationRun.evaluation_key == evaluation_key)
-        )
-        existing_run = existing.first()
+    session = config["configurable"]["session"]
 
-        if existing_run:
-            print(f"Evaluation run already exists: {evaluation_key}")
-            return {"evaluation_run_id": existing_run.id}
+    # Check if evaluation already exists (idempotency)
+    existing = await session.exec(
+        select(EvaluationRun).where(EvaluationRun.evaluation_key == evaluation_key)
+    )
+    existing_run = existing.first()
 
-        # Create new evaluation run
-        run = EvaluationRun(
-            evaluation_key=evaluation_key,
-            status=EvaluationStatus.PROCESSING,
-        )
-        session.add(run)
-        await session.commit()
-        await session.refresh(run)
+    if existing_run:
+        print(f"Evaluation run already exists: {evaluation_key}")
+        return {"evaluation_run_id": existing_run.id}
 
-        print(f"Created evaluation run: {run.id} ({evaluation_key})")
-        return {"evaluation_run_id": run.id}
+    # Create new evaluation run
+    run = EvaluationRun(
+        evaluation_key=evaluation_key,
+        status=EvaluationStatus.PROCESSING,
+    )
+    session.add(run)
+    await session.commit()
+    await session.refresh(run)
+
+    print(f"Created evaluation run: {run.id} ({evaluation_key})")
+    return {"evaluation_run_id": run.id}
 
 
-async def finalize_evaluation_run(state: AgentState) -> dict:
+async def finalize_evaluation_run(state: AgentState, config: RunnableConfig) -> dict:
     """
     Finalize the EvaluationRun and persist all AnalysisResults.
 
@@ -77,32 +78,30 @@ async def finalize_evaluation_run(state: AgentState) -> dict:
         print("No evaluation_run_id in state, skipping finalization")
         return {}
 
-    async with AsyncSessionLocal() as session:
+    session = config["configurable"]["session"]
 
-        # Fetch the evaluation run
-        result = await session.exec(
-            select(EvaluationRun).where(EvaluationRun.id == state.evaluation_run_id)
-        )
-        run = result.first()
+    # Fetch the evaluation run
+    result = await session.exec(
+        select(EvaluationRun).where(EvaluationRun.id == state.evaluation_run_id)
+    )
+    run = result.first()
 
-        if not run:
-            print(f"Evaluation run not found: {state.evaluation_run_id}")
-            return {}
-
-        # Batch insert analysis results - set run_id and add to session
-        analysis_results = state.analysis_results or []
-        for ar in analysis_results:
-            ar.run_id = run.id
-            session.add(ar)
-
-        # Update evaluation run
-        run.status = EvaluationStatus.DONE
-        run.risk_level = state.risk_level
-        run.end_ts = datetime.now(timezone.utc)
-
-        await session.commit()
-
-        print(
-            f"Finalized evaluation run: {run.id} with {len(analysis_results)} results"
-        )
+    if not run:
+        print(f"Evaluation run not found: {state.evaluation_run_id}")
         return {}
+
+    # Batch insert analysis results - set run_id and add to session
+    analysis_results = state.analysis_results or []
+    for ar in analysis_results:
+        ar.run_id = run.id
+        session.add(ar)
+
+    # Update evaluation run
+    run.status = EvaluationStatus.DONE
+    run.risk_level = state.risk_level
+    run.end_ts = datetime.now(timezone.utc)
+
+    await session.commit()
+
+    print(f"Finalized evaluation run: {run.id} with {len(analysis_results)} results")
+    return {}
