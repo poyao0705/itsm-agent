@@ -72,7 +72,9 @@ async def create_evaluation_run(
             stmt = (
                 insert(EvaluationRun)
                 .values(
-                    evaluation_key=evaluation_key, status=EvaluationStatus.PROCESSING
+                    evaluation_key=evaluation_key,
+                    status=EvaluationStatus.PROCESSING,
+                    start_ts=datetime.now(timezone.utc),
                 )
                 .on_conflict_do_nothing(index_elements=[EvaluationRun.evaluation_key])
                 .returning(EvaluationRun.id)
