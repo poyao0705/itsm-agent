@@ -9,7 +9,6 @@ from fastapi import HTTPException
 from app.services.change_management.graph import change_management_graph
 from app.services.github.security import verify_signature
 from app.core.config import settings
-from app.db.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -74,11 +73,7 @@ async def handle_github_webhook(
         if action == "closed" and is_merged:
             return {"message": "PR merged, ignored"}
 
-        async with AsyncSessionLocal() as session:
-            result = await change_management_graph.ainvoke(
-                {"webhook_payload": payload},
-                config={"configurable": {"session": session}},
-            )
+        result = await change_management_graph.ainvoke({"webhook_payload": payload})
         # print the final state
         # pprint.pprint(result)
         return {"message": "PR processed", "state": result}
