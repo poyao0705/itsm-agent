@@ -1,12 +1,11 @@
+from pathlib import Path
 from dotenv import load_dotenv
-
 
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
-from app.db.session import lifespan
 
+from app.db.session import lifespan
 from app.api.api_v1 import router as api_v1
 
 load_dotenv()  # Load .env variables into os.environ for libraries (LangSmith, etc.)

@@ -3,35 +3,50 @@
 {% block title %}Welcome to ITSM Agent{% endblock %}
 
 {% block content %}
-    <!-- Alpine.js Implementation: Dismissible Alert -->
+    <!-- DaisyUI Alert -->
     <div x-data="{ open: true }" x-show="open" 
-         class="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 flex justify-between items-center transition-all">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                </svg>
-            </div>
-            <div class="ml-3">
-                <p class="text-sm text-blue-700">
-                    <strong>Pro Tip:</strong> Alpine.js is currently handling this alert's visibility locally!
-                </p>
-            </div>
+         class="alert alert-info shadow-lg mb-8">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div>
+            <h3 class="font-bold">Pro Tip!</h3>
+            <p class="text-xs">Alpine.js is currently handling this alert's visibility locally!</p>
         </div>
-        <button @click="open = false" class="text-blue-500 hover:text-blue-600 font-bold ml-4">✕</button>
+        <button @click="open = false" class="btn btn-sm btn-ghost">✕</button>
     </div>
 
-    <h1 class="text-4xl font-extrabold mb-4">Welcome to ITSM Agent</h1>
-    <p class="text-lg text-gray-600 mb-8">This is a simple welcome template served with Jinja2, HTMX, and Tailwind CSS.</p>
+    <!-- Hero Section -->
+    <div class="hero bg-base-100 rounded-2xl shadow-xl overflow-hidden mb-8">
+        <div class="hero-content text-center p-12">
+            <div class="max-w-md">
+                <h1 class="text-5xl font-bold">ITSM Agent</h1>
+                <p class="py-6 text-lg opacity-70">
+                    A powerful AI agent for Change Management and ITSM automation.
+                    Built with <span class="badge badge-secondary">LangGraph</span>, <span class="badge badge-primary">FastAPI</span>, and <span class="badge badge-accent">DaisyUI</span>.
+                </p>
+                <button hx-get="/api/v1/health" hx-target="#health-check" 
+                        class="btn btn-primary shadow-lg px-8">
+                    Check API Health
+                </button>
+            </div>
+        </div>
+    </div>
     
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <button hx-get="/api/v1/health" hx-target="#health-check" 
-                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-            Check API Health
-        </button>
-        
-        <div id="health-check" class="mt-4 p-4 bg-gray-50 rounded-lg text-sm font-mono text-gray-700">
-            <!-- Health status will be loaded here -->
+    <!-- Status Card -->
+    <div class="card bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+                System Status
+            </h2>
+            <p class="text-sm opacity-60">Real-time health reporting for your ITSM infrastructure.</p>
+            
+            <div id="health-check" class="mt-4 p-4 bg-neutral text-neutral-content rounded-xl text-sm font-mono min-h-[50px] flex items-center justify-center italic opacity-50">
+                Click the button above to run diagnostics...
+            </div>
+
+            <div class="card-actions justify-end mt-4">
+                <button class="btn btn-ghost btn-sm" onclick="location.reload()">Refresh Page</button>
+            </div>
         </div>
     </div>
 {% endblock %}

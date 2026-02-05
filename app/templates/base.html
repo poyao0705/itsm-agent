@@ -8,14 +8,25 @@
     <!-- HTMX from Local -->
     <script src="{{ url_for('static', path='/js/vendor/htmx-2.0.8.min.js') }}"></script>
     
+    <!-- DaisyUI from Local -->
+    <link href="{{ url_for('static', path='/css/vendor/daisyui-5.5.17.css') }}" rel="stylesheet" type="text/css" />
+
     <!-- Tailwind from Local -->
-    <script src="{{ url_for('static', path='/js/vendor/tailwindcss-3.4.15.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/vendor/tailwindcss-4.1.18.js') }}"></script>
 
     <!-- Alpine from Local -->
     <script defer src="{{ url_for('static', path='/js/vendor/alpine-3.15.8.min.js') }}"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans">
-    <main class="max-w-4xl mx-auto p-8">
+<body class="bg-base-200 text-base-content font-sans min-h-screen">
+    <div class="navbar bg-base-100 shadow-sm mb-8">
+        <div class="flex-1">
+            <a class="btn btn-ghost text-xl">ITSM Agent</a>
+        </div>
+        <div class="flex-none">
+            <input type="checkbox" value="dark" class="toggle theme-controller" />
+        </div>
+    </div>
+    <main class="max-w-4xl mx-auto p-4 sm:p-8">
         {% block content %}{% endblock %}
     </main>
 </body>
