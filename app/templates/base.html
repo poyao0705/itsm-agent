@@ -36,7 +36,7 @@
         check();
         setInterval(check, 30000);
       ">
-    <div class="navbar bg-base-100 shadow-sm mb-2">
+    <div class="navbar bg-base-100/80 backdrop-blur-md sticky top-0 z-50 border-b border-base-300 shadow-sm">
         <div class="flex-1">
             <a hx-get="/" hx-target="main" hx-push-url="true" class="btn btn-ghost text-xl cursor-pointer">ITSM Agent</a>
         </div>
@@ -52,12 +52,12 @@
         </div>
     </div>
 
-    <main class="max-w-6xl mx-auto p-4 sm:p-8 flex-grow w-full">
+    <main class="max-w-6xl mx-auto px-4 sm:px-8 pt-2 sm:pt-4 pb-8 flex-grow w-full">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Global Status Bar -->
-    <footer class="mt-auto px-6 py-3 border-t border-base-300 bg-base-100 text-[10px] uppercase tracking-widest opacity-40">
+    <footer class="sticky bottom-0 z-50 px-6 py-3 border-t border-base-300 bg-base-100/80 backdrop-blur-md text-[10px] uppercase tracking-widest">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <!-- Evaluation Stream Status -->

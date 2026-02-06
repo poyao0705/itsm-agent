@@ -8,7 +8,7 @@ This keeps the API layer clean for pure JSON endpoints.
 from typing import Annotated
 import asyncio
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Query
 from fastapi.templating import Jinja2Templates
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -50,20 +50,33 @@ async def root(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/evaluations")
-async def evaluations_page(request: Request, db: AsyncSession = Depends(get_db)):
+async def evaluations_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+):
     service = EvaluationService(db)
-    evals = await service.get_evaluations(limit=20)
+    skip = (page - 1) * page_size
+    evals = await service.get_evaluations(skip=skip, limit=page_size)
+    total_count = await service.count_evaluations()
+    total_pages = (total_count + page_size - 1) // page_size
+
+    context = {
+        "request": request,
+        "evaluations": evals,
+        "page": page,
+        "total_pages": total_pages,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
+    }
 
     # If HTMX request, return the evaluations list partial
     if request.headers.get("HX-Request"):
-        return templates.TemplateResponse(
-            "partials/evaluations_list.html", {"request": request, "evaluations": evals}
-        )
+        return templates.TemplateResponse("partials/evaluations_list.html", context)
 
     # Full page load
-    return templates.TemplateResponse(
-        "evaluations.html", {"request": request, "evaluations": evals}
-    )
+    return templates.TemplateResponse("evaluations.html", context)
 
 
 # -----------------------------------------------------------------------------

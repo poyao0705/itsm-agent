@@ -1,5 +1,5 @@
 from typing import List
-from sqlmodel import select
+from sqlmodel import select, func
 from sqlalchemy import desc
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -12,7 +12,7 @@ class EvaluationService:
         self.session = session
 
     async def get_evaluations(
-        self, skip: int = 0, limit: int = 20
+        self, skip: int = 0, limit: int = 10
     ) -> List[EvaluationRun]:
         """
         Fetch evaluation runs with pagination.
@@ -26,3 +26,12 @@ class EvaluationService:
         )
         result = await self.session.execute(statement)
         return result.scalars().all()
+
+    async def count_evaluations(self) -> int:
+        """
+        Get total number of evaluation runs.
+        """
+        # pylint: disable-next=not-callable
+        statement = select(func.count()).select_from(EvaluationRun)
+        result = await self.session.execute(statement)
+        return result.scalar() or 0
