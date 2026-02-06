@@ -14,6 +14,8 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.dependencies.database import get_db
 from app.services.change_management.evaluations import EvaluationService
+from app.core.pg_listen import pg_listen
+from app.db.session import AsyncSessionLocal
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -86,8 +88,6 @@ async def evaluations_page(
 @router.get("/evaluations/sse-stream")
 async def sse_stream(request: Request):
     """SSE stream that pushes updated evaluation rows via PostgreSQL LISTEN/NOTIFY."""
-    from app.core.pg_listen import pg_listen
-    from app.db.session import AsyncSessionLocal
 
     async def event_generator():
         async for payload in pg_listen("eval_updates", timeout=25.0):
