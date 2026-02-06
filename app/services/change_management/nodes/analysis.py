@@ -9,8 +9,7 @@ import fnmatch
 import os
 import yaml
 
-from app.db.models.analysis_result import AnalysisResultCreate
-from app.schemas.agent_state import AgentState
+from app.services.change_management.contracts import AgentState, AnalysisResultCreate
 from app.services.change_management.policy.loader import (
     load_policy,
     get_change_rules,

@@ -1,5 +1,11 @@
 """
 Analysis result models and DTOs for the Change Management Agent.
+
+All analysis result types in one place:
+- AnalysisResultBase: shared fields
+- AnalysisResultCreate: DTO for creating (used in AgentState)
+- AnalysisResult: ORM model (database table)
+- AnalysisResultPublic: response DTO
 """
 
 import uuid
@@ -33,7 +39,6 @@ class AnalysisResultBase(SQLModel):
     )
     details: Dict[str, Any] = Field(
         default_factory=dict,
-        sa_column=Column(JSONB, nullable=True),
         description="Detailed information about the analysis result.",
     )
 
@@ -59,6 +64,13 @@ class AnalysisResult(AnalysisResultBase, table=True):
     """
 
     __tablename__ = "analysis_result"
+
+    # Override details to use JSONB column type
+    details: dict = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=True),
+        description="Detailed information about the analysis result.",
+    )
 
     id: uuid.UUID = Field(
         default_factory=uuid.uuid4,

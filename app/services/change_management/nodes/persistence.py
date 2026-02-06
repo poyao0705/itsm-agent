@@ -12,7 +12,7 @@ from langgraph.runtime import Runtime
 
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
 from app.db.models.analysis_result import AnalysisResult
-from app.schemas.agent_state import AgentState
+from app.services.change_management.contracts import AgentState
 from app.services.change_management.context import Ctx
 
 

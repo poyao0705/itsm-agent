@@ -6,9 +6,9 @@ from typing import Dict, Any, List
 
 from functools import lru_cache
 import yaml
-
-from app.schemas.change_type_rule import ChangeTypeRule
 import os
+
+from app.services.change_management.policy.types import ChangeTypeRule
 
 DEFAULT_POLICY_PATH = os.path.join(os.path.dirname(__file__), "policy.yaml")
 
@@ -78,17 +78,3 @@ def get_risk_priority(policy: Dict[str, Any]) -> Dict[str, int]:
     """
     risk_levels = list(policy.get("risk_levels", {}).keys())
     return {level: i for i, level in enumerate(risk_levels)}
-
-
-@lru_cache(maxsize=1)
-def get_default_risk_priority() -> Dict[str, int]:
-    """
-    Get risk priorities from the default policy file.
-    """
-    try:
-        policy = load_policy(DEFAULT_POLICY_PATH)
-        return get_risk_priority(policy)
-    except Exception as e:
-        print(f"Warning: Could not load default policy for priorities: {e}")
-        # Fallback to some defaults if file missing
-        return {"LOW": 0, "UNKNOWN": 1, "HIGH": 2}

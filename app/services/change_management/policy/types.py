@@ -1,5 +1,7 @@
 """
 Change type rule model for policy configuration.
+
+Pure data model — no service imports.
 """
 
 from sqlmodel import SQLModel, Field

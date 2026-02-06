@@ -1,5 +1,7 @@
 """
 Agent state model for the Change Management Agent.
+
+Pure graph state — no service-layer imports.
 """
 
 from sqlmodel import SQLModel, Field
@@ -8,7 +10,7 @@ import operator
 import uuid
 
 from app.db.models.analysis_result import AnalysisResultCreate
-from app.services.change_management.policy.loader import get_default_risk_priority
+from app.services.change_management.policy.priority import get_default_risk_priority
 
 
 def merge_risk_level(left: str, right: str) -> str:
@@ -17,7 +19,6 @@ def merge_risk_level(left: str, right: str) -> str:
     Priority is determined by the sequence in policy.yaml.
     """
     priorities = get_default_risk_priority()
-
     return left if priorities.get(left, 0) > priorities.get(right, 0) else right
 
 
