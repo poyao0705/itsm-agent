@@ -7,7 +7,7 @@ from typing import Optional, List, Annotated, Dict, Any
 import operator
 import uuid
 
-from app.db.models.analysis_result import AnalysisResultPublic
+from app.db.models.analysis_result import AnalysisResultCreate
 from app.services.change_management.policy.loader import get_default_risk_priority
 
 
@@ -56,7 +56,7 @@ class AgentState(SQLModel):
     installation_id: Optional[int] = Field(
         default=None, description="The GitHub App installation ID."
     )
-    analysis_results: Annotated[List[AnalysisResultPublic], operator.add] = Field(
+    analysis_results: Annotated[List[AnalysisResultCreate], operator.add] = Field(
         default_factory=list, description="The analysis results of the agent."
     )
     evaluation_run_id: Optional[uuid.UUID] = Field(

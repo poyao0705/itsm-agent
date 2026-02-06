@@ -12,6 +12,11 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, DateTime
 from enum import Enum
 
+from app.db.models.analysis_result import AnalysisResultPublic
+
+if TYPE_CHECKING:
+    from app.db.models.analysis_result import AnalysisResult
+
 
 class EvaluationStatus(str, Enum):
     """Evaluation status enum."""
@@ -22,16 +27,33 @@ class EvaluationStatus(str, Enum):
     ERROR = "ERROR"
 
 
-if TYPE_CHECKING:
-    from app.db.models.analysis_result import AnalysisResult
+# -----------------------------------------------------------------------------
+# Base
+# -----------------------------------------------------------------------------
+class EvaluationRunBase(SQLModel):
+    """Shared fields for EvaluationRun."""
+
+    evaluation_key: str = Field(
+        unique=True,
+        index=True,
+        description="Stable identifier: owner/repo:pr_number:head_sha:body_hash",
+    )
+    status: EvaluationStatus = Field(
+        default=EvaluationStatus.PROCESSING,
+        description="Current status of the evaluation run.",
+    )
+    risk_level: str = Field(
+        default="LOW",
+        description="The overall calculated risk level for this run.",
+    )
 
 
-class EvaluationRun(SQLModel, table=True):
+# -----------------------------------------------------------------------------
+# ORM Model (Database layer)
+# -----------------------------------------------------------------------------
+class EvaluationRun(EvaluationRunBase, table=True):
     """
     Evaluation Run table.
-
-    Stores computed risks, status, reason codes, and timestamps for an evaluation.
-    Unique key: evaluation_key
     """
 
     __tablename__ = "evaluation_run"
@@ -42,13 +64,6 @@ class EvaluationRun(SQLModel, table=True):
         index=True,
         nullable=False,
     )
-    evaluation_key: str = Field(
-        unique=True,
-        index=True,
-        description="Stable identifier: owner/repo:pr_number:head_sha:body_hash",
-    )
-
-    # Timestamps
     start_ts: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -57,17 +72,21 @@ class EvaluationRun(SQLModel, table=True):
         default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
     )
 
-    # Status
-    status: EvaluationStatus = Field(
-        default=EvaluationStatus.PROCESSING,
-        description="Current status of the evaluation run.",
-    )
-    risk_level: str = Field(
-        default="LOW",
-        description="The overall calculated risk level for this run.",
-    )
-
     # Relationships
     analysis_results: List["AnalysisResult"] = Relationship(
         back_populates="evaluation_run"
     )
+
+
+# -----------------------------------------------------------------------------
+# Public (Response/Read layer)
+# -----------------------------------------------------------------------------
+class EvaluationRunPublic(EvaluationRunBase):
+    """
+    Public DTO for EvaluationRun responses.
+    """
+
+    id: uuid.UUID
+    start_ts: datetime
+    end_ts: Optional[datetime] = None
+    analysis_results: List[AnalysisResultPublic] = []
