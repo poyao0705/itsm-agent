@@ -19,7 +19,7 @@
         </div>
         <div id="evaluations-container" 
              hx-ext="sse" 
-             sse-connect="/api/v1/evaluations/sse-stream" 
+             sse-connect="/evaluations/sse-stream" 
              sse-swap="eval-update"
              class="min-h-[200px]">
             {% include "partials/evaluations_latest.html" %}
