@@ -89,28 +89,27 @@ async def sse_stream(
     request: Request,
     service: Annotated[EvaluationService, Depends(get_evaluation_service)] = None,
 ):
-    """SSE stream that pushes updated evaluation rows to the frontend."""
+    """SSE stream that pushes updated evaluation rows via PostgreSQL LISTEN/NOTIFY."""
+    from app.core.pg_listen import pg_listen
 
     async def event_generator():
-        last_id = None
-        while True:
+        async for payload in pg_listen("eval_updates", timeout=30.0):
             # Check if client closed connection
             if await request.is_disconnected():
                 break
 
+            if payload == "":
+                # Keep-alive: send a comment to prevent timeout
+                yield {"comment": "keep-alive"}
+                continue
+
+            # Notification received! Fetch latest data and send
             evals = await service.get_evaluations(limit=5)
-            current_id = str(evals[0].id) if evals else None
-
-            # Only send update if the latest evaluation has changed
-            if current_id != last_id:
-                last_id = current_id
-                yield {
-                    "event": "eval-update",
-                    "data": templates.get_template("partials/evaluations_latest.html")
-                    .render({"request": request, "evaluations": evals})
-                    .replace("\n", ""),
-                }
-
-            await asyncio.sleep(5)
+            yield {
+                "event": "eval-update",
+                "data": templates.get_template("partials/evaluations_latest.html")
+                .render({"request": request, "evaluations": evals})
+                .replace("\n", ""),
+            }
 
     return EventSourceResponse(event_generator())
