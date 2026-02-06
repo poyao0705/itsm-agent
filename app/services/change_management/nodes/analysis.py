@@ -9,7 +9,7 @@ import fnmatch
 import os
 import yaml
 
-from app.schemas.analysis_finding import AnalysisFinding
+from app.db.models.analysis_result import AnalysisResultPublic
 from app.schemas.agent_state import AgentState
 from app.services.change_management.policy.loader import (
     load_policy,
@@ -36,10 +36,11 @@ def analyze_jira_ticket_number(state: AgentState) -> dict:
     if match:
         return {"jira_ticket_number": match.group(1)}
 
-    analysis_result = AnalysisFinding(
+    analysis_result = AnalysisResultPublic(
         node_name="analyze_jira_ticket_number",
         reason_code="JIRA_TICKET_NUMBER_NOT_FOUND",
         summary="[HIGH RISK] JIRA ticket number not found in PR title.",
+        risk_level="HIGH",
         details={"pr_title": pr_title},
     )
 
@@ -95,12 +96,13 @@ def policy_rule_analysis(state: AgentState) -> dict:
     if not unique_matches:
         return {"risk_level": "UNKNOWN"}
 
-    # Create one AnalysisFinding per match
+    # Create one AnalysisResultPublic per match
     results = [
-        AnalysisFinding(
+        AnalysisResultPublic(
             node_name="policy_rule_analysis",
             reason_code=f"{m['risk_level']}_RISK_RULES_MATCHED",
             summary=f"[{m['risk_level']} RISK] {m['file']}: {m['rule_desc']}",
+            risk_level=m["risk_level"],
             details={"matched_file": m},
         )
         for m in unique_matches

@@ -134,6 +134,7 @@ async def finalize_evaluation_run(
                     node_name=finding.node_name,
                     reason_code=finding.reason_code,
                     summary=finding.summary,
+                    risk_level=finding.risk_level,
                     details=finding.details,
                 )
                 session.add(ar)

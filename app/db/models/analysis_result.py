@@ -1,5 +1,5 @@
 """
-Analysis result model for the Change Management Agent.
+Analysis result models and DTOs for the Change Management Agent.
 """
 
 import uuid
@@ -9,14 +9,26 @@ from sqlmodel import SQLModel, Relationship, Field
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 
-
 if TYPE_CHECKING:
     from app.db.models.evaluation_run import EvaluationRun
 
 
+class AnalysisResultPublic(SQLModel):
+    """
+    DTO for a single analysis finding/result.
+    Used in AgentState to ensure serializability.
+    """
+
+    node_name: str
+    reason_code: str
+    summary: str
+    risk_level: str
+    details: Dict[str, Any] = {}
+
+
 class AnalysisResult(SQLModel, table=True):
     """
-    Represents a single analysis result.
+    ORM Model for a single analysis result in the database.
     """
 
     __tablename__ = "analysis_result"
@@ -40,6 +52,9 @@ class AnalysisResult(SQLModel, table=True):
     )
     summary: str = Field(
         ..., description="A human-readable summary of the analysis result."
+    )
+    risk_level: str = Field(
+        default="LOW", description="The risk level associated with this finding."
     )
     details: Dict[str, Any] = Field(
         default_factory=dict,
