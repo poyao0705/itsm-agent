@@ -6,7 +6,6 @@ This keeps the API layer clean for pure JSON endpoints.
 """
 
 from typing import Annotated
-import asyncio
 
 from fastapi import APIRouter, Depends, Request, Query
 from fastapi.templating import Jinja2Templates
