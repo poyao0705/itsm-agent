@@ -7,6 +7,7 @@ Builds the LangGraph StateGraph for the change management workflow.
 from langgraph.graph import StateGraph, START, END
 
 from app.schemas.agent_state import AgentState
+from app.services.change_management.context import Ctx
 from app.services.change_management.nodes import (
     read_pr_from_webhook,
     fetch_pr_info,
@@ -18,8 +19,8 @@ from app.services.change_management.nodes import (
 )
 
 
-# 1. Initialize Graph
-workflow = StateGraph(AgentState)
+# 1. Initialize Graph with context schema
+workflow = StateGraph(AgentState, context_schema=Ctx)
 
 # 2. Add Nodes
 workflow.add_node("read_pr_from_webhook", read_pr_from_webhook)

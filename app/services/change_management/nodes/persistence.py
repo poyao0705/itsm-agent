@@ -5,35 +5,15 @@ These nodes handle database operations for EvaluationRun and AnalysisResult.
 """
 
 from datetime import datetime, timezone
-from typing import Optional, cast
+from typing import Optional
 from sqlmodel import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
-from langchain_core.runnables import RunnableConfig
+from langgraph.runtime import Runtime
 
-from app.db.session import AsyncSessionLocal
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
 from app.db.models.analysis_result import AnalysisResult
 from app.schemas.agent_state import AgentState
-
-
-def get_session_factory(
-    config: Optional[RunnableConfig],
-) -> async_sessionmaker[AsyncSession]:
-    """
-    Get session factory from config or default to global.
-
-    Allows overriding DB session for testing.
-    """
-    if (
-        config
-        and "configurable" in config
-        and "session_factory" in config["configurable"]
-    ):
-        return cast(
-            async_sessionmaker[AsyncSession], config["configurable"]["session_factory"]
-        )
-    return AsyncSessionLocal
+from app.services.change_management.context import Ctx
 
 
 def build_evaluation_key(state: AgentState) -> Optional[str]:
@@ -52,9 +32,7 @@ def build_evaluation_key(state: AgentState) -> Optional[str]:
     return f"{state.owner}/{state.repo}:{state.pr_number}:{head_sha}:{body_hash}"
 
 
-async def create_evaluation_run(
-    state: AgentState, config: Optional[RunnableConfig] = None
-) -> dict:
+async def create_evaluation_run(state: AgentState, runtime: Runtime[Ctx]) -> dict:
     """
     Create an EvaluationRun record at the start of the workflow.
 
@@ -66,8 +44,7 @@ async def create_evaluation_run(
         print("Cannot create evaluation run: missing required state fields")
         return {}
 
-    sf = get_session_factory(config)
-    async with sf() as session:
+    async with runtime.context.db() as session:
         async with session.begin():
             # Atomically insert or ignore
             stmt = (
@@ -99,9 +76,7 @@ async def create_evaluation_run(
             return {"evaluation_run_id": run_id}
 
 
-async def finalize_evaluation_run(
-    state: AgentState, config: Optional[RunnableConfig] = None
-) -> dict:
+async def finalize_evaluation_run(state: AgentState, runtime: Runtime[Ctx]) -> dict:
     """
     Finalize the EvaluationRun and persist all AnalysisResults.
 
@@ -113,8 +88,7 @@ async def finalize_evaluation_run(
         print("No evaluation_run_id in state, skipping finalization")
         return {}
 
-    sf = get_session_factory(config)
-    async with sf() as session:
+    async with runtime.context.db() as session:
         async with session.begin():
             # Fetch the evaluation run
             result = await session.exec(

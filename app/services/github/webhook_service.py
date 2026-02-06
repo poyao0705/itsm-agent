@@ -6,6 +6,8 @@ import logging
 from starlette.requests import Request
 from fastapi import HTTPException
 
+from app.db.session import AsyncSessionLocal
+from app.services.change_management.context import Ctx
 from app.services.change_management.graph import change_management_graph
 from app.services.github.security import verify_signature
 from app.core.config import settings
@@ -73,7 +75,10 @@ async def handle_github_webhook(
         if action == "closed" and is_merged:
             return {"message": "PR merged, ignored"}
 
-        result = await change_management_graph.ainvoke({"webhook_payload": payload})
+        result = await change_management_graph.ainvoke(
+            {"webhook_payload": payload},
+            context=Ctx(db=AsyncSessionLocal),
+        )
         # print the final state
         # pprint.pprint(result)
         return {"message": "PR processed", "state": result}

@@ -6,7 +6,7 @@ import uuid
 from typing import Dict, Any, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
 from sqlmodel import SQLModel, Relationship, Field
-from sqlalchemy import Column
+from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 
 if TYPE_CHECKING:
@@ -73,6 +73,7 @@ class AnalysisResult(AnalysisResultBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
         description="The time when the analysis result was updated.",
     )
 
