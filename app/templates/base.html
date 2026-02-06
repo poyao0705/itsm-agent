@@ -18,17 +18,74 @@
     <!-- Alpine from Local -->
     <script defer src="{{ url_for('static', path='/js/vendor/alpine-3.15.8.min.js') }}"></script>
 </head>
-<body class="bg-base-200 text-base-content font-sans min-h-screen">
-    <div class="navbar bg-base-100 shadow-sm mb-8">
+<body class="bg-base-200 text-base-content font-sans min-h-screen flex flex-col"
+      x-data="{ streamStatus: 'inactive', apiStatus: 'unknown' }"
+      @htmx:sse-error.window="streamStatus = 'offline'"
+      @htmx:sse-open.window="streamStatus = 'online'"
+      x-init="
+        const check = async () => {
+            try {
+                const resp = await fetch('/api/v1/health');
+                if (!resp.ok) throw new Error();
+                const data = await resp.json();
+                apiStatus = data.status;
+            } catch (e) {
+                apiStatus = 'offline';
+            }
+        };
+        check();
+        setInterval(check, 30000);
+      ">
+    <div class="navbar bg-base-100 shadow-sm mb-2">
         <div class="flex-1">
-            <a class="btn btn-ghost text-xl">ITSM Agent</a>
+            <a href="/" class="btn btn-ghost text-xl">ITSM Agent</a>
         </div>
         <div class="flex-none">
             <input type="checkbox" value="dark" class="toggle theme-controller" />
         </div>
     </div>
-    <main class="max-w-6xl mx-auto p-4 sm:p-8">
+
+    <main class="max-w-6xl mx-auto p-4 sm:p-8 flex-grow w-full">
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Global Status Bar -->
+    <footer class="mt-auto px-6 py-3 border-t border-base-300 bg-base-100 text-[10px] uppercase tracking-widest opacity-40">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <!-- Evaluation Stream Status -->
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full"
+                         :class="{
+                            'bg-success animate-pulse': streamStatus === 'online',
+                            'bg-error': streamStatus === 'offline',
+                            'bg-base-content/20': streamStatus === 'inactive'
+                         }"></div>
+                    <span x-text="streamStatus === 'online' ? 'Stream Connected' : (streamStatus === 'offline' ? 'Stream Offline' : 'Stream Inactive')">Stream Inactive</span>
+                </div>
+                
+                <div class="w-px h-3 bg-base-content/20"></div>
+
+                <!-- API System Life Indicator -->
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full transition-all duration-700"
+                         :class="{
+                            'bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]': apiStatus === 'ok',
+                            'bg-error animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]': apiStatus !== 'ok' && apiStatus !== 'unknown',
+                            'bg-neutral': apiStatus === 'unknown'
+                         }"></div>
+                    <span class="opacity-70">Core System:</span>
+                    <span :class="apiStatus === 'ok' ? 'text-success' : 'text-error font-bold'" 
+                          x-text="apiStatus.toUpperCase()">UNKNOWN</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <span>ITSM AGENT SYSTEM v1.0</span>
+                <div class="w-px h-3 bg-base-content/20"></div>
+                <span class="font-mono">© 2025</span>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
