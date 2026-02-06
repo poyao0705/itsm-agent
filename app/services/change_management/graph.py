@@ -6,7 +6,7 @@ Builds the LangGraph StateGraph for the change management workflow.
 
 from langgraph.graph import StateGraph, START, END
 
-from app.services.change_management.contracts import AgentState
+from app.services.change_management.state import AgentState
 from app.services.change_management.context import Ctx
 from app.services.change_management.nodes import (
     read_pr_from_webhook,

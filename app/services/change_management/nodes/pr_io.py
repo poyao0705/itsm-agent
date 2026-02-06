@@ -4,7 +4,7 @@ PR I/O nodes for the Change Management Agent.
 These nodes handle reading from webhooks, fetching PR info, and posting comments.
 """
 
-from app.services.change_management.contracts import AgentState
+from app.services.change_management.state import AgentState
 from app.integrations.github import GitHubClient, get_access_token
 
 
