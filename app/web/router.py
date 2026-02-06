@@ -85,26 +85,26 @@ async def evaluations_page(
 
 
 @router.get("/evaluations/sse-stream")
-async def sse_stream(
-    request: Request,
-    service: Annotated[EvaluationService, Depends(get_evaluation_service)] = None,
-):
+async def sse_stream(request: Request):
     """SSE stream that pushes updated evaluation rows via PostgreSQL LISTEN/NOTIFY."""
     from app.core.pg_listen import pg_listen
+    from app.db.session import AsyncSessionLocal
 
     async def event_generator():
-        async for payload in pg_listen("eval_updates", timeout=30.0):
+        async for payload in pg_listen("eval_updates", timeout=25.0):
             # Check if client closed connection
             if await request.is_disconnected():
                 break
 
             if payload == "":
-                # Keep-alive: send a comment to prevent timeout
-                yield {"comment": "keep-alive"}
+                # no-op tick; EventSourceResponse ping will handle keepalive
                 continue
 
-            # Notification received! Fetch latest data and send
-            evals = await service.get_evaluations(limit=5)
+            # Notification received! Create a fresh session and fetch data
+            async with AsyncSessionLocal() as session:
+                service = EvaluationService(session)
+                evals = await service.get_evaluations(limit=5)
+
             yield {
                 "event": "eval-update",
                 "data": templates.get_template("partials/evaluations_latest.html")
@@ -112,4 +112,4 @@ async def sse_stream(
                 .replace("\n", ""),
             }
 
-    return EventSourceResponse(event_generator())
+    return EventSourceResponse(event_generator(), ping=15)

@@ -25,16 +25,24 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE OR REPLACE FUNCTION notify_evaluation_change()
-        RETURNS TRIGGER AS $$
+        RETURNS trigger AS $$
+        DECLARE
+            payload text;
         BEGIN
-            PERFORM pg_notify('eval_updates', '');
+            IF (TG_OP = 'DELETE') THEN
+                payload = OLD.id::text;
+            ELSE
+                payload = NEW.id::text;
+            END IF;
+            PERFORM pg_notify('eval_updates', payload);
             RETURN NULL;
         END;
         $$ LANGUAGE plpgsql;
     """
     )
 
-    # Create the trigger
+    op.execute("DROP TRIGGER IF EXISTS evaluation_run_changed ON evaluation_run;")
+
     op.execute(
         """
         CREATE TRIGGER evaluation_run_changed
