@@ -10,6 +10,10 @@ risk_levels:
     description: "Low risk change"
     change_types: {}
 
+  UNKNOWN:
+    description: "Unknown risk level - requires investigation"
+    change_types: {}
+
   HIGH:
     description: "High risk change"
     change_types:

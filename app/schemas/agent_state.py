@@ -3,19 +3,21 @@ Agent state model for the Change Management Agent.
 """
 
 from sqlmodel import SQLModel, Field
-from typing import Literal, Optional, List, Annotated, Dict, Any
+from typing import Optional, List, Annotated, Dict, Any
 import operator
 import uuid
 
-from app.db.models.analysis_result import AnalysisResult
+from app.schemas.analysis_finding import AnalysisFinding
+from app.services.change_management.policy.loader import get_default_risk_priority
 
 
 def merge_risk_level(left: str, right: str) -> str:
     """
     Reducer for risk_level. Returns the highest risk level.
-    Priority: HIGH > LOW > UNKNOWN
+    Priority is determined by the sequence in policy.yaml.
     """
-    priorities = {"HIGH": 2, "LOW": 1, "UNKNOWN": 0}
+    priorities = get_default_risk_priority()
+
     return left if priorities.get(left, 0) > priorities.get(right, 0) else right
 
 
@@ -48,13 +50,13 @@ class AgentState(SQLModel):
     jira_ticket_number: Optional[str] = Field(
         default=None, description="The JIRA ticket number of the PR."
     )
-    risk_level: Annotated[Literal["LOW", "HIGH", "UNKNOWN"], merge_risk_level] = Field(
-        default="UNKNOWN", description="The risk level of the PR."
+    risk_level: Annotated[str, merge_risk_level] = Field(
+        default="LOW", description="The risk level of the PR."
     )
     installation_id: Optional[int] = Field(
         default=None, description="The GitHub App installation ID."
     )
-    analysis_results: Annotated[List["AnalysisResult"], operator.add] = Field(
+    analysis_results: Annotated[List[AnalysisFinding], operator.add] = Field(
         default_factory=list, description="The analysis results of the agent."
     )
     evaluation_run_id: Optional[uuid.UUID] = Field(

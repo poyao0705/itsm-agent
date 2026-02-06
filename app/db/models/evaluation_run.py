@@ -22,14 +22,6 @@ class EvaluationStatus(str, Enum):
     ERROR = "ERROR"
 
 
-class RiskLevel(str, Enum):
-    """Risk level enum."""
-
-    LOW = "LOW"
-    HIGH = "HIGH"
-    UNKNOWN = "UNKNOWN"
-
-
 if TYPE_CHECKING:
     from app.db.models.analysis_result import AnalysisResult
 
@@ -70,8 +62,8 @@ class EvaluationRun(SQLModel, table=True):
         default=EvaluationStatus.PROCESSING,
         description="Current status of the evaluation run.",
     )
-    risk_level: RiskLevel = Field(
-        default=RiskLevel.LOW,
+    risk_level: str = Field(
+        default="LOW",
         description="The overall calculated risk level for this run.",
     )
 

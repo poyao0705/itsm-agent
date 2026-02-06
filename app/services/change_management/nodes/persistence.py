@@ -13,6 +13,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.db.session import AsyncSessionLocal
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
+from app.db.models.analysis_result import AnalysisResult
 from app.schemas.agent_state import AgentState
 
 
@@ -125,10 +126,16 @@ async def finalize_evaluation_run(
                 print(f"Evaluation run not found: {state.evaluation_run_id}")
                 return {}
 
-            # Batch insert analysis results - set run_id and add to session
-            analysis_results = state.analysis_results or []
-            for ar in analysis_results:
-                ar.run_id = run.id
+            # Batch insert analysis results - convert DTO to ORM and add to session
+            analysis_findings = state.analysis_results or []
+            for finding in analysis_findings:
+                ar = AnalysisResult(
+                    run_id=run.id,
+                    node_name=finding.node_name,
+                    reason_code=finding.reason_code,
+                    summary=finding.summary,
+                    details=finding.details,
+                )
                 session.add(ar)
 
             # Update evaluation run
@@ -139,6 +146,6 @@ async def finalize_evaluation_run(
             await session.commit()
 
             print(
-                f"Finalized evaluation run: {run.id} with {len(analysis_results)} results"
+                f"Finalized evaluation run: {run.id} with {len(analysis_findings)} results"
             )
             return {}
