@@ -29,8 +29,33 @@ app.include_router(api_v1, prefix="/api/v1")
 async def root(request: Request, db: AsyncSession = Depends(get_db)):
     service = EvaluationService(db)
     evals = await service.get_evaluations(limit=5)
+
+    # If HTMX request, return the dashboard partial
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(
+            "partials/dashboard.html", {"request": request, "evaluations": evals}
+        )
+
+    # Full page load
     return templates.TemplateResponse(
         "index.html", {"request": request, "evaluations": evals}
+    )
+
+
+@app.get("/evaluations")
+async def evaluations_page(request: Request, db: AsyncSession = Depends(get_db)):
+    service = EvaluationService(db)
+    evals = await service.get_evaluations(limit=20)
+
+    # If HTMX request, return the evaluations list partial
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(
+            "partials/evaluations_list.html", {"request": request, "evaluations": evals}
+        )
+
+    # Full page load
+    return templates.TemplateResponse(
+        "evaluations.html", {"request": request, "evaluations": evals}
     )
 
 

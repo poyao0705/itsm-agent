@@ -38,10 +38,17 @@
       ">
     <div class="navbar bg-base-100 shadow-sm mb-2">
         <div class="flex-1">
-            <a href="/" class="btn btn-ghost text-xl">ITSM Agent</a>
+            <a hx-get="/" hx-target="main" hx-push-url="true" class="btn btn-ghost text-xl cursor-pointer">ITSM Agent</a>
         </div>
         <div class="flex-none">
-            <input type="checkbox" value="dark" class="toggle theme-controller" />
+        {# Horizontal list of links #}
+            <ul class="menu menu-horizontal px-1 items-center gap-2">
+                {# A button that swap the content to /evaluations #}
+                <li><a class="btn btn-ghost" hx-get="/evaluations" hx-target="main" hx-push-url="true">Evaluations</a></li>
+                <li class="flex items-center mr-2">
+                    <input type="checkbox" value="dark" class="toggle theme-controller toggle-sm" />
+                </li>
+            </ul>
         </div>
     </div>
 

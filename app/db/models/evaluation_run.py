@@ -48,6 +48,17 @@ class EvaluationRunBase(SQLModel):
         description="The overall calculated risk level for this run.",
     )
 
+    @property
+    def display_name(self) -> str:
+        """Parses repo and PR number from evaluation_key."""
+        # Static analysis tools sometimes misidentify SQLModel fields as FieldInfo.
+        # We use str() here to satisfy the type checker and ensure we have the value.
+        key = str(self.evaluation_key)
+        parts = key.split(":")
+        if len(parts) >= 2:
+            return f"{parts[0]} #{parts[1]}"
+        return key
+
 
 # -----------------------------------------------------------------------------
 # ORM Model (Database layer)

@@ -34,7 +34,8 @@ async def get_evaluations(
     # If it's an HTMX request, return the partial template
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(
-            "components/evaluations_list.html", {"request": request, "evaluations": res}
+            "partials/evaluations_latest.html",
+            {"request": request, "evaluations": res},
         )
 
     # Otherwise, return the model objects (FastAPI will convert to JSON via response_model)
@@ -63,7 +64,7 @@ async def sse_stream(
                 last_id = current_id
                 yield {
                     "event": "eval-update",
-                    "data": templates.get_template("components/evaluations_list.html")
+                    "data": templates.get_template("partials/evaluations_latest.html")
                     .render({"request": request, "evaluations": evals})
                     .replace("\n", ""),
                 }

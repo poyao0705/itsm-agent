@@ -3,6 +3,7 @@
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Target</th>
                 <th>Started</th>
                 <th>Status</th>
                 <th>Risk</th>
@@ -11,7 +12,8 @@
         <tbody>
             {% for eval in evaluations %}
             <tr class="hover">
-                <td class="font-mono text-xs opacity-70">{{ eval.id|string|truncate(8) }}</td>
+                <td class="text-xs font-mono opacity-50">{{ eval.id|string|truncate(8, True, '') }}</td>
+                <td class="font-medium text-xs">{{ eval.display_name }}</td>
                 <td>{{ eval.start_ts.strftime('%Y-%m-%d %H:%M') if eval.start_ts else 'N/A' }}</td>
                 <td>
                     {% if eval.status == 'DONE' %}
@@ -36,7 +38,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="text-center py-8 opacity-50 italic">No evaluations found yet.</td>
+                <td colspan="5" class="text-center py-8 opacity-50 italic">No evaluations found yet.</td>
             </tr>
             {% endfor %}
         </tbody>
