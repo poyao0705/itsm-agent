@@ -1,12 +1,15 @@
 from pathlib import Path
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.session import lifespan
 from app.api.api_v1 import router as api_v1
+from app.dependencies.database import get_db
+from app.services.change_management.evaluations import EvaluationService
 
 load_dotenv()  # Load .env variables into os.environ for libraries (LangSmith, etc.)
 
@@ -23,8 +26,12 @@ app.include_router(api_v1, prefix="/api/v1")
 
 
 @app.get("/")
-async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def root(request: Request, db: AsyncSession = Depends(get_db)):
+    service = EvaluationService(db)
+    evals = await service.get_evaluations(limit=5)
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "evaluations": evals}
+    )
 
 
 if __name__ == "__main__":

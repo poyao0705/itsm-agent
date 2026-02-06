@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, String
 from enum import Enum
 
 from app.db.models.analysis_result import AnalysisResultPublic
@@ -38,8 +38,9 @@ class EvaluationRunBase(SQLModel):
         index=True,
         description="Stable identifier: owner/repo:pr_number:head_sha:body_hash",
     )
-    status: EvaluationStatus = Field(
+    status: str = Field(
         default=EvaluationStatus.PROCESSING,
+        sa_column=Column(String, nullable=False, default=EvaluationStatus.PROCESSING),
         description="Current status of the evaluation run.",
     )
     risk_level: str = Field(
