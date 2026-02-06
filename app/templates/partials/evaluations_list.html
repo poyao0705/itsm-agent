@@ -4,14 +4,68 @@
             <h1 class="text-3xl font-bold">All Evaluations</h1>
             <p class="opacity-60">Complete history of evaluation runs.</p>
         </div>
-        <a hx-get="/" hx-target="main" hx-push-url="true" class="btn btn-outline btn-sm">Back to Dashboard</a>
+        <a hx-get="/" hx-target="main" hx-push-url="/" class="btn btn-outline btn-sm">Back to Dashboard</a>
     </div>
 
-    <div class="card bg-base-100 shadow-xl border border-base-300">
-        <div class="card-body p-0">
-             <div id="full-evaluations-container">
-                {% include "partials/evaluations_latest.html" %}
-             </div>
+    <div class="join join-vertical bg-base-100 w-full">
+        {% for eval in evaluations %}
+        <div class="collapse collapse-arrow join-item border-base-300 border">
+            <input type="checkbox" />
+            <div class="collapse-title">
+                <div class="flex items-center gap-4 flex-wrap">
+                    <span class="text-xs font-mono opacity-50 w-16">{{ eval.id|string|truncate(8, True, '') }}</span>
+                    <span class="font-semibold">{{ eval.display_name }}</span>
+                    <span class="text-sm opacity-60">
+                        <span class="text-xs opacity-50">Started:</span> {{ eval.start_ts.strftime('%Y-%m-%d %H:%M') if eval.start_ts else 'N/A' }}
+                    </span>
+                    <div class="flex-grow"></div>
+                    <span class="text-xs opacity-50">Status:</span>
+                    {% if eval.status == 'DONE' %}
+                    <div class="badge badge-success badge-sm">DONE</div>
+                    {% elif eval.status == 'PROCESSING' %}
+                    <div class="badge badge-warning badge-sm">PROCESSING</div>
+                    {% elif eval.status == 'ACTION_REQUIRED' %}
+                    <div class="badge badge-info badge-sm">ACTION REQUIRED</div>
+                    {% else %}
+                    <div class="badge badge-error badge-sm">{{ eval.status }}</div>
+                    {% endif %}
+                    <span class="text-xs opacity-50">Risk:</span>
+                    {% if eval.risk_level == 'HIGH' %}
+                    <div class="badge badge-error">{{ eval.risk_level }}</div>
+                    {% elif eval.risk_level == 'MEDIUM' %}
+                    <div class="badge badge-warning">{{ eval.risk_level }}</div>
+                    {% else %}
+                    <div class="badge badge-info">{{ eval.risk_level }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="collapse-content">
+                {% if eval.analysis_results %}
+                <div class="flex flex-col gap-2 pt-2">
+                    {% for result in eval.analysis_results %}
+                    <div class="p-3 bg-base-200 rounded-lg">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-mono text-xs opacity-60">{{ result.node_name }}</span>
+                            <span class="badge badge-ghost badge-xs">{{ result.reason_code }}</span>
+                            {% if result.risk_level == 'HIGH' %}
+                            <span class="badge badge-error badge-xs">{{ result.risk_level }}</span>
+                            {% elif result.risk_level == 'MEDIUM' %}
+                            <span class="badge badge-warning badge-xs">{{ result.risk_level }}</span>
+                            {% else %}
+                            <span class="badge badge-info badge-xs">{{ result.risk_level }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-sm">{{ result.summary }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm opacity-50 italic pt-2">No analysis results yet.</p>
+                {% endif %}
+            </div>
         </div>
+        {% else %}
+        <div class="text-center py-8 opacity-50 italic">No evaluations found yet.</div>
+        {% endfor %}
     </div>
 </div>
