@@ -87,20 +87,16 @@ async def evaluations_page(
 async def sse_stream(request: Request):
     """SSE stream that pushes updated evaluation rows via BroadcastService."""
     from app.core.broadcast import get_broadcast_service
+    from app.core.handlers.evaluation import EVAL_UPDATES_CHANNEL
     import asyncio
 
-    broadcaster = get_broadcast_service()
+    broadcast_service = get_broadcast_service()
     queue = asyncio.Queue(maxsize=1)  # Bounded to prevent slow-client OOM
-    await broadcaster.connect(queue)
+    await broadcast_service.subscribe(EVAL_UPDATES_CHANNEL, queue)
 
     async def event_generator():
         try:
             while True:
-                # Wait for data from the broadcaster (or client disconnect)
-                # We use asyncio.wait to handle disconnection promptly if needed,
-                # but Request.is_disconnected() is usually polled or checked.
-                # simpler: get() and check disconnect.
-
                 if await request.is_disconnected():
                     break
 
@@ -108,7 +104,7 @@ async def sse_stream(request: Request):
                     # Wait for data with a timeout to allow periodic keep-alive/disconnect checks
                     data = await asyncio.wait_for(queue.get(), timeout=15.0)
 
-                    # 'data' is the list of evaluations (or other payload)
+                    # 'data' is the list of EvaluationRunPublic DTOs
                     # Render the HTML fragment
                     html = (
                         templates.get_template("partials/evaluations_latest.html")
@@ -122,6 +118,6 @@ async def sse_stream(request: Request):
                     yield {"comment": "keep-alive"}
 
         finally:
-            await broadcaster.disconnect(queue)
+            await broadcast_service.unsubscribe(EVAL_UPDATES_CHANNEL, queue)
 
     return EventSourceResponse(event_generator())

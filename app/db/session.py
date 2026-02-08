@@ -9,10 +9,8 @@ Attributes:
     engine: The global SQLModel engine instance used for database operations.
 """
 
-from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import FastAPI
 from app.core.config import settings
 
 engine_kwargs = {
@@ -34,14 +32,4 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    """Lifespan function for FastAPI application."""
-    from app.core.broadcast import get_broadcast_service
-
-    broadcaster = get_broadcast_service()
-    await broadcaster.start()
-    yield
-    await broadcaster.stop()
-    await engine.dispose()
+# No more lifespan here - moved to app.core.lifespan

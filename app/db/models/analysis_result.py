@@ -93,6 +93,18 @@ class AnalysisResult(AnalysisResultBase, table=True):
         back_populates="analysis_results"
     )
 
+    def to_public(self) -> "AnalysisResultPublic":
+        """Convert to render-safe public DTO."""
+        return AnalysisResultPublic(
+            id=self.id,
+            node_name=self.node_name,
+            reason_code=self.reason_code,
+            summary=self.summary,
+            risk_level=self.risk_level,
+            details=self.details,
+            updated_at=self.updated_at,
+        )
+
 
 # -----------------------------------------------------------------------------
 # Public (Response/Read layer)

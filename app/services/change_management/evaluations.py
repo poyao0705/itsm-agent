@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from app.core.logging import get_logger
+from app.core.valkey_pubsub import publish_eval_update
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
 from app.db.models.analysis_result import AnalysisResult
 from app.services.change_management.graph import change_management_graph
@@ -176,6 +177,7 @@ class EvaluationService:
             logger.info("Created evaluation run: %s (%s)", run_id, evaluation_key)
 
         await self.session.commit()
+        await publish_eval_update(str(run_id))
         return str(run_id)
 
     async def _persist_analysis_results(self, run_id: str, state: dict) -> None:
@@ -222,6 +224,7 @@ class EvaluationService:
         run.end_ts = datetime.now(timezone.utc)
 
         await self.session.commit()
+        await publish_eval_update(run_id)
         logger.info("Finalized evaluation run: %s with status DONE", run_id)
 
     async def _mark_evaluation_error(self, run_id: str, error_message: str) -> None:
@@ -242,6 +245,7 @@ class EvaluationService:
                 run.status = EvaluationStatus.ERROR
                 run.end_ts = datetime.now(timezone.utc)
                 await self.session.commit()
+                await publish_eval_update(run_id)
                 logger.warning(
                     "Marked evaluation run %s as ERROR: %s", run_id, error_message
                 )

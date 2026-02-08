@@ -98,6 +98,21 @@ class EvaluationRun(EvaluationRunBase, table=True):
         back_populates="evaluation_run"
     )
 
+    def to_public(self) -> "EvaluationRunPublic":
+        """Convert to render-safe public DTO."""
+        return EvaluationRunPublic(
+            id=self.id,
+            evaluation_key=self.evaluation_key,
+            status=self.status,
+            risk_level=self.risk_level,
+            owner=self.owner,
+            repo=self.repo,
+            pr_number=self.pr_number,
+            start_ts=self.start_ts,
+            end_ts=self.end_ts,
+            analysis_results=[ar.to_public() for ar in (self.analysis_results or [])],
+        )
+
 
 # -----------------------------------------------------------------------------
 # Public (Response/Read layer)
