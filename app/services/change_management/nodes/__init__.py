@@ -11,10 +11,6 @@ from app.services.change_management.nodes.analysis import (
     analyze_jira_ticket_number,
     policy_rule_analysis,
 )
-from app.services.change_management.nodes.persistence import (
-    create_evaluation_run,
-    finalize_evaluation_run,
-)
 
 __all__ = [
     "read_pr_from_webhook",
@@ -22,6 +18,4 @@ __all__ = [
     "post_pr_comment",
     "analyze_jira_ticket_number",
     "policy_rule_analysis",
-    "create_evaluation_run",
-    "finalize_evaluation_run",
 ]

@@ -7,8 +7,7 @@ from starlette.requests import Request
 from fastapi import HTTPException
 
 from app.db.session import AsyncSessionLocal
-from app.services.change_management.context import Ctx
-from app.services.change_management.graph import change_management_graph
+from app.services.change_management.evaluations import EvaluationService
 from app.services.github.security import verify_signature
 from app.core.config import settings
 
@@ -37,7 +36,7 @@ async def parse_webhook_payload(request: Request) -> dict:
 
 
 async def handle_github_webhook(
-    request: Request, event_type: str, raw_body: bytes, signature_header: str
+    event_type: str, raw_body: bytes, signature_header: str
 ) -> dict:
     """
     Process a GitHub webhook: parse payload and route by event type.
@@ -47,7 +46,6 @@ async def handle_github_webhook(
     - Other events: logged and ignored.
 
     Args:
-        request: The incoming HTTP request.
         event_type: The X-GitHub-Event header value (e.g. "push", "pull_request").
         raw_body: The raw body bytes for signature verification.
         signature_header: The X-Hub-Signature-256 header.
@@ -75,13 +73,21 @@ async def handle_github_webhook(
         if action == "closed" and is_merged:
             return {"message": "PR merged, ignored"}
 
-        result = await change_management_graph.ainvoke(
-            {"webhook_payload": payload},
-            context=Ctx(db=AsyncSessionLocal),
-        )
-        # print the final state
-        # pprint.pprint(result)
-        return {"message": "PR processed", "state": result}
+        # Use service layer for workflow orchestration with fail-fast error handling
+        async with AsyncSessionLocal() as session:
+            service = EvaluationService(session)
+            try:
+                result = await service.run_evaluation_workflow(
+                    webhook_payload=payload,
+                    session_factory=AsyncSessionLocal,
+                )
+                return {"message": "PR processed", "state": result}
+            except Exception as e:
+                logger.error("Evaluation workflow failed: %s", str(e), exc_info=True)
+                # Error status already updated by service layer
+                raise HTTPException(
+                    status_code=500, detail=f"Evaluation workflow failed: {str(e)}"
+                ) from e
 
     logger.info("GitHub webhook received: %s", event_type)
     return {"message": "Event ignored", "event": event_type}

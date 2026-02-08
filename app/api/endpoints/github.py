@@ -18,4 +18,4 @@ async def handle_github_webhook(
     event-specific processing (e.g. pull_request -> Change Management agent).
     """
     raw_body = await request.body()
-    return await process_webhook(request, x_github_event, raw_body, x_hub_signature_256)
+    return await process_webhook(x_github_event, raw_body, x_hub_signature_256)

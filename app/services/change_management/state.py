@@ -60,6 +60,3 @@ class AgentState(SQLModel):
     analysis_results: Annotated[List[AnalysisResultCreate], operator.add] = Field(
         default_factory=list, description="The analysis results of the agent."
     )
-    evaluation_run_id: Optional[uuid.UUID] = Field(
-        default=None, description="Database ID of the EvaluationRun record."
-    )

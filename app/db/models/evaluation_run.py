@@ -47,12 +47,21 @@ class EvaluationRunBase(SQLModel):
         default="LOW",
         description="The overall calculated risk level for this run.",
     )
+    owner: Optional[str] = Field(
+        default=None, index=True, description="Repository owner"
+    )
+    repo: Optional[str] = Field(default=None, index=True, description="Repository name")
+    pr_number: Optional[int] = Field(
+        default=None, index=True, description="Pull request number"
+    )
 
     @property
     def display_name(self) -> str:
-        """Parses repo and PR number from evaluation_key."""
-        # Static analysis tools sometimes misidentify SQLModel fields as FieldInfo.
-        # We use str() here to satisfy the type checker and ensure we have the value.
+        """Returns human-readable name, using stored fields if available."""
+        if self.owner and self.repo and self.pr_number:
+            return f"{self.owner}/{self.repo} #{self.pr_number}"
+
+        # Fallback: parse from key (legacy records)
         key = str(self.evaluation_key)
         parts = key.split(":")
         if len(parts) >= 2:
