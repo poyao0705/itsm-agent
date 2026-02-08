@@ -14,8 +14,6 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.dependencies.database import get_db
 from app.services.change_management.evaluations import EvaluationService
-from app.core.pg_listen import pg_listen
-from app.db.session import AsyncSessionLocal
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -87,28 +85,43 @@ async def evaluations_page(
 
 @router.get("/evaluations/sse-stream")
 async def sse_stream(request: Request):
-    """SSE stream that pushes updated evaluation rows via PostgreSQL LISTEN/NOTIFY."""
+    """SSE stream that pushes updated evaluation rows via BroadcastService."""
+    from app.core.broadcast import get_broadcast_service
+    import asyncio
+
+    broadcaster = get_broadcast_service()
+    queue = asyncio.Queue(maxsize=1)  # Bounded to prevent slow-client OOM
+    await broadcaster.connect(queue)
 
     async def event_generator():
-        async for payload in pg_listen("eval_updates", timeout=25.0):
-            # Check if client closed connection
-            if await request.is_disconnected():
-                break
+        try:
+            while True:
+                # Wait for data from the broadcaster (or client disconnect)
+                # We use asyncio.wait to handle disconnection promptly if needed,
+                # but Request.is_disconnected() is usually polled or checked.
+                # simpler: get() and check disconnect.
 
-            if payload == "":
-                # no-op tick; EventSourceResponse ping will handle keepalive
-                continue
+                if await request.is_disconnected():
+                    break
 
-            # Notification received! Create a fresh session and fetch data
-            async with AsyncSessionLocal() as session:
-                service = EvaluationService(session)
-                evals = await service.get_evaluations(limit=5)
+                try:
+                    # Wait for data with a timeout to allow periodic keep-alive/disconnect checks
+                    data = await asyncio.wait_for(queue.get(), timeout=15.0)
 
-            yield {
-                "event": "eval-update",
-                "data": templates.get_template("partials/evaluations_latest.html")
-                .render({"request": request, "evaluations": evals})
-                .replace("\n", ""),
-            }
+                    # 'data' is the list of evaluations (or other payload)
+                    # Render the HTML fragment
+                    html = (
+                        templates.get_template("partials/evaluations_latest.html")
+                        .render({"request": request, "evaluations": data})
+                        .replace("\n", "")
+                    )
 
-    return EventSourceResponse(event_generator(), ping=15)
+                    yield {"event": "eval-update", "data": html}
+                except asyncio.TimeoutError:
+                    # Keep-alive
+                    yield {"comment": "keep-alive"}
+
+        finally:
+            await broadcaster.disconnect(queue)
+
+    return EventSourceResponse(event_generator())

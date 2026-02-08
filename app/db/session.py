@@ -15,7 +15,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import FastAPI
 from app.core.config import settings
 
-
 engine_kwargs = {
     "pool_size": 10,
     "max_overflow": 20,
@@ -39,5 +38,10 @@ AsyncSessionLocal = async_sessionmaker(
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Lifespan function for FastAPI application."""
+    from app.core.broadcast import get_broadcast_service
+
+    broadcaster = get_broadcast_service()
+    await broadcaster.start()
     yield
+    await broadcaster.stop()
     await engine.dispose()
