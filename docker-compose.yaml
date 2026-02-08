@@ -2,35 +2,35 @@ services:
   backend:
     build: .
     container_name: itsm_agent_backend
-    depends_on:
-      - db
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@itsm-agent-db.c9as8wmiego7.ap-southeast-2.rds.amazonaws.com:5432/itsm_agent_db
       - GITHUB_APP_PRIVATE_KEY=/app/private-key.pem
     volumes:
       - ./${GITHUB_APP_PRIVATE_KEY}:/app/private-key.pem
     restart: unless-stopped
 
-  db:
-    image: postgres:18-alpine
-    container_name: itsm_agent_postgres_db
+  # Local dev db container setup
+  # db:
+  #   image: postgres:18-alpine
+  #   container_name: itsm_agent_postgres_db
     
-    restart: unless-stopped
+  #   restart: unless-stopped
     
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
     
-    ports:
-      - "${POSTGRES_PORT}:5432"
+  #   ports:
+  #     - "${POSTGRES_PORT}:5432"
     
-    volumes:
-      - db_data:/var/lib/postgresql/data
+  #   volumes:
+  #     - db_data:/var/lib/postgresql/data
 
 volumes:
   db_data:
