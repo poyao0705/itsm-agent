@@ -4,8 +4,11 @@ PR I/O nodes for the Change Management Agent.
 These nodes handle reading from webhooks, fetching PR info, and posting comments.
 """
 
+from app.core.logging import get_logger
 from app.services.change_management.state import AgentState
 from app.integrations.github import GitHubClient, get_access_token
+
+logger = get_logger(__name__)
 
 
 async def read_pr_from_webhook(state: AgentState) -> dict:
@@ -47,7 +50,7 @@ async def fetch_pr_info(state: AgentState) -> dict:
     Fetch PR info via GitHub API and store in pr_evidence.
     """
     if not state.owner or not state.repo or not state.pr_number:
-        print("Missing required PR identifiers, skipping fetch.")
+        logger.warning("Missing required PR identifiers, skipping fetch.")
         return {}
 
     # Use the installation token if available
@@ -56,7 +59,7 @@ async def fetch_pr_info(state: AgentState) -> dict:
         try:
             token = await get_access_token(state.installation_id)
         except Exception as e:
-            print(f"Failed to get installation token: {e}")
+            logger.error("Failed to get installation token: %s", e)
 
     pr_info = await GitHubClient(token).fetch_pr_info(
         state.owner, state.repo, state.pr_number, include_diff=True

@@ -7,8 +7,12 @@ from fastapi.staticfiles import StaticFiles
 from app.db.session import lifespan
 from app.api.api_v1 import router as api_v1
 from app.web import web_router
+from app.core.logging import setup_logging
 
 load_dotenv()  # Load .env variables into os.environ for libraries (LangSmith, etc.)
+
+# Configure logging before app initialization
+setup_logging(level="INFO")
 
 
 app = FastAPI(lifespan=lifespan)

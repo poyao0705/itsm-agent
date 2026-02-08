@@ -6,10 +6,13 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
+from app.core.logging import get_logger
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
 from app.db.models.analysis_result import AnalysisResult
 from app.services.change_management.graph import change_management_graph
 from app.services.change_management.context import Ctx
+
+logger = get_logger(__name__)
 
 
 class EvaluationService:
@@ -168,9 +171,9 @@ class EvaluationService:
                 )
             )
             run_id = existing.scalar_one()
-            print(f"Evaluation run already exists: {evaluation_key}")
+            logger.info("Evaluation run already exists: %s", evaluation_key)
         else:
-            print(f"Created evaluation run: {run_id} ({evaluation_key})")
+            logger.info("Created evaluation run: %s (%s)", run_id, evaluation_key)
 
         await self.session.commit()
         return str(run_id)
@@ -197,7 +200,9 @@ class EvaluationService:
             self.session.add(ar)
 
         await self.session.commit()
-        print(f"Persisted {len(analysis_findings)} analysis results for run {run_id}")
+        logger.info(
+            "Persisted %d analysis results for run %s", len(analysis_findings), run_id
+        )
 
     async def _finalize_evaluation_run(self, run_id: str, state: dict) -> None:
         """
@@ -217,7 +222,7 @@ class EvaluationService:
         run.end_ts = datetime.now(timezone.utc)
 
         await self.session.commit()
-        print(f"Finalized evaluation run: {run_id} with status DONE")
+        logger.info("Finalized evaluation run: %s with status DONE", run_id)
 
     async def _mark_evaluation_error(self, run_id: str, error_message: str) -> None:
         """
@@ -237,7 +242,9 @@ class EvaluationService:
                 run.status = EvaluationStatus.ERROR
                 run.end_ts = datetime.now(timezone.utc)
                 await self.session.commit()
-                print(f"Marked evaluation run {run_id} as ERROR: {error_message}")
+                logger.warning(
+                    "Marked evaluation run %s as ERROR: %s", run_id, error_message
+                )
         except Exception as e:
             # Best-effort - don't fail if we can't update
-            print(f"Failed to mark evaluation as ERROR: {e}")
+            logger.error("Failed to mark evaluation as ERROR: %s", e)

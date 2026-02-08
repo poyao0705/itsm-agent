@@ -8,9 +8,12 @@ will have its own broadcaster. For true global singleton, use Redis/NATS.
 import asyncio
 from typing import Set, Optional, List
 
+from app.core.logging import get_logger
 from app.core.pg_listen import pg_listen
 from app.db.session import AsyncSessionLocal
 from app.services.change_management.evaluations import EvaluationService
+
+logger = get_logger(__name__)
 
 # Global instance (Singleton per process)
 _broadcaster: Optional["BroadcastEvaluationService"] = None
@@ -71,7 +74,7 @@ class BroadcastEvaluationService:
             return  # Already running
 
         self.listen_task = asyncio.create_task(self._listener_loop())
-        print("BroadcastService: Started background listener.")
+        logger.info("BroadcastService: Started background listener.")
 
     async def stop(self):
         """Stop the background listener."""
@@ -82,24 +85,24 @@ class BroadcastEvaluationService:
             except asyncio.CancelledError:
                 pass
             self.listen_task = None
-            print("BroadcastService: Stopped.")
+            logger.info("BroadcastService: Stopped.")
 
     async def _listener_loop(self):
         """
         Listen to PostgreSQL notifications and broadcast to all clients.
         """
-        print("BroadcastService: Listening to 'eval_updates'...")
+        logger.info("BroadcastService: Listening to 'eval_updates'...")
         try:
             async for payload in pg_listen("eval_updates", timeout=30.0):
                 if payload == "":
                     # Keep-alive tick
                     continue
 
-                print(f"BroadcastService: Received payload: {payload}")
+                logger.debug("BroadcastService: Received payload: %s", payload)
 
                 # Skip DB fetch if nobody is listening (saves resources)
                 if not self.subscribers:
-                    print("BroadcastService: No subscribers, skipping fetch.")
+                    logger.debug("BroadcastService: No subscribers, skipping fetch.")
                     continue
 
                 # Fetch ONCE
@@ -117,23 +120,24 @@ class BroadcastEvaluationService:
 
                     # Broadcast without blocking on slow clients
                     current_subs = list(self.subscribers)
-                    print(
-                        f"BroadcastService: Broadcasting to {len(current_subs)} clients."
+                    logger.debug(
+                        "BroadcastService: Broadcasting to %d clients.",
+                        len(current_subs),
                     )
 
                     for q in current_subs:
                         self._put_latest(q, evals_payload)
 
                 except Exception as e:
-                    print(f"BroadcastService error processing update: {e}")
+                    logger.error("BroadcastService error processing update: %s", e)
 
         except asyncio.CancelledError:
             # Normal shutdown
             raise
         except Exception as e:
-            print(f"BroadcastService listener loop crashed: {e}")
+            logger.error("BroadcastService listener loop crashed: %s", e, exc_info=True)
         finally:
-            print("BroadcastService listener loop ended.")
+            logger.info("BroadcastService listener loop ended.")
 
     def _to_dto(self, evals: list) -> List[dict]:
         """

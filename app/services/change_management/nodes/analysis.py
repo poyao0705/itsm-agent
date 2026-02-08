@@ -9,6 +9,7 @@ import fnmatch
 import os
 import yaml
 
+from app.core.logging import get_logger
 from app.services.change_management.state import AgentState
 from app.db.models.analysis_result import AnalysisResultCreate
 from app.services.change_management.policy.loader import (
@@ -17,13 +18,15 @@ from app.services.change_management.policy.loader import (
     get_risk_priority,
 )
 
+logger = get_logger(__name__)
+
 
 def analyze_jira_ticket_number(state: AgentState) -> dict:
     """
     Node to analyze the JIRA ticket number in the PR.
     """
     if not state.pr_info:
-        print("Missing pr_info, skipping JIRA analysis.")
+        logger.warning("Missing pr_info, skipping JIRA analysis.")
         return {}
 
     pr_info = state.pr_info or {}
@@ -55,7 +58,7 @@ def policy_rule_analysis(state: AgentState) -> dict:
     changed_files = pr_info.get("changed_files", [])
 
     if not changed_files:
-        print("No changed files to analyze.")
+        logger.debug("No changed files to analyze.")
         return {}
 
     # Load Policy
@@ -67,10 +70,10 @@ def policy_rule_analysis(state: AgentState) -> dict:
         rules = get_change_rules(policy, excluded_risk_levels=["LOW"])
         risk_priority = get_risk_priority(policy)
     except (FileNotFoundError, yaml.YAMLError) as e:
-        print(f"Failed to load or parse policy: {e}")
+        logger.error("Failed to load or parse policy: %s", e)
         return {}
     except Exception as e:
-        print(f"Unexpected error loading policy: {e}")
+        logger.error("Unexpected error loading policy: %s", e, exc_info=True)
         return {}
 
     # Match files against rules (single pass with inline deduplication)

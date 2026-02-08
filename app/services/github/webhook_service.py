@@ -1,7 +1,6 @@
 """GitHub webhook handling: payload parsing and event processing."""
 
 import json
-import logging
 
 from starlette.requests import Request
 from fastapi import HTTPException
@@ -10,8 +9,9 @@ from app.db.session import AsyncSessionLocal
 from app.services.change_management.evaluations import EvaluationService
 from app.services.github.security import verify_signature
 from app.core.config import settings
+from app.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def parse_webhook_payload(request: Request) -> dict:

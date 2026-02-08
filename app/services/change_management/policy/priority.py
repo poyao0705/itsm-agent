@@ -9,6 +9,10 @@ from typing import Dict
 import os
 import yaml
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 DEFAULT_POLICY_PATH = os.path.join(os.path.dirname(__file__), "policy.yaml")
 
@@ -30,6 +34,6 @@ def get_default_risk_priority() -> Dict[str, int]:
         risk_levels = list(policy.get("risk_levels", {}).keys())
         return {level: i for i, level in enumerate(risk_levels)}
     except Exception as e:
-        print(f"Warning: Could not load default policy for priorities: {e}")
+        logger.warning("Could not load default policy for priorities: %s", e)
         # Fallback to some defaults if file missing
         return {"LOW": 0, "UNKNOWN": 1, "HIGH": 2}

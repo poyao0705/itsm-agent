@@ -8,7 +8,10 @@ from functools import lru_cache
 import yaml
 import os
 
+from app.core.logging import get_logger
 from app.services.change_management.policy.types import ChangeTypeRule
+
+logger = get_logger(__name__)
 
 DEFAULT_POLICY_PATH = os.path.join(os.path.dirname(__file__), "policy.yaml")
 
@@ -60,7 +63,9 @@ def get_change_rules(
                     ChangeTypeRule(id=rule_id, risk_level=level_name, **rule_data)
                 )
             except Exception as e:
-                print(f"Error parsing rule '{rule_id}' in level {level_name}: {e}")
+                logger.error(
+                    "Error parsing rule '%s' in level %s: %s", rule_id, level_name, e
+                )
 
     return all_rules
 
