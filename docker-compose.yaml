@@ -22,10 +22,10 @@ services:
       - .env
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - GITHUB_APP_PRIVATE_KEY=/app/private-key.pem
+      - GITHUB_APP_PRIVATE_KEY=/app/pr-comment-bot-key.2026-01-28.pem
       - VALKEY_URL=redis://valkey:6379/0
     volumes:
-      - ./private-key.pem:/app/private-key.pem:ro
+      - ./pr-comment-bot-key.2026-01-28.pem:/app/pr-comment-bot-key.2026-01-28.pem:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health').read()"]
