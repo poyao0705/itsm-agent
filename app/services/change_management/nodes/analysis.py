@@ -97,7 +97,7 @@ def policy_rule_analysis(state: AgentState) -> dict:
                     )
 
     if not unique_matches:
-        return {"risk_level": "UNKNOWN"}
+        return {"risk_level": "LOW"}
 
     # Create one AnalysisResultCreate per match
     results = [
