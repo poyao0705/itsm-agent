@@ -1,0 +1,15 @@
+{
+    # Global options
+    email poyaohg0705@gmail.com
+}
+
+# Configuration for local development
+# This will automatically set up local HTTPS
+# localhost {
+#     reverse_proxy backend:8000
+# }
+
+# Configuration for production (uncomment and replace with your domain)
+3.106.189.64.sslip.io {
+    reverse_proxy backend:8000
+}
