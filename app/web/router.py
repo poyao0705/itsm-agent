@@ -13,6 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.dependencies.database import get_db
+from app.db.session import AsyncSessionLocal
 from app.services.change_management.evaluations import EvaluationService
 
 router = APIRouter()
@@ -86,38 +87,56 @@ async def evaluations_page(
 @router.get("/evaluations/sse-stream")
 async def sse_stream(request: Request):
     """SSE stream that pushes updated evaluation rows via BroadcastService."""
-    from app.core.broadcast import get_broadcast_service
-    from app.core.handlers.evaluation import EVAL_UPDATES_CHANNEL
+    from app.core import broadcast
     import asyncio
 
-    broadcast_service = get_broadcast_service()
-    queue = asyncio.Queue(maxsize=1)  # Bounded to prevent slow-client OOM
-    await broadcast_service.subscribe(EVAL_UPDATES_CHANNEL, queue)
-
     async def event_generator():
-        try:
-            while True:
-                if await request.is_disconnected():
-                    break
+        # We use the context manager for robust cleanup
+        async with broadcast.subscribe(broadcast.STREAM_KEY) as queue:
 
-                try:
-                    # Wait for data with a timeout to allow periodic keep-alive/disconnect checks
-                    data = await asyncio.wait_for(queue.get(), timeout=15.0)
+            # 1. Send initial snapshot (State Synchronization)
+            # Use short-lived session to avoid pinning connection for long stream
+            async with AsyncSessionLocal() as session:
+                service = EvaluationService(session)
+                initial_evals = await service.get_evaluations(limit=5)
 
-                    # 'data' is the list of EvaluationRunPublic DTOs
-                    # Render the HTML fragment
-                    html = (
-                        templates.get_template("partials/evaluations_latest.html")
-                        .render({"request": request, "evaluations": data})
-                        .replace("\n", "")
-                    )
+            html = (
+                templates.get_template("partials/evaluations_latest.html")
+                .render({"request": request, "evaluations": initial_evals})
+                .replace("\n", "")
+            )
+            yield {"event": "eval-update", "data": html}
 
-                    yield {"event": "eval-update", "data": html}
-                except asyncio.TimeoutError:
-                    # Keep-alive
-                    yield {"comment": "keep-alive"}
+            # 2. Stream loop
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        break
 
-        finally:
-            await broadcast_service.unsubscribe(EVAL_UPDATES_CHANNEL, queue)
+                    try:
+                        # Wait for invalidation signal (coalesced)
+                        await asyncio.wait_for(queue.get(), timeout=15.0)
+
+                        # Fetch fresh data (Self-Healing / Invalidation Pattern)
+                        # Use new short-lived session
+                        async with AsyncSessionLocal() as session:
+                            service = EvaluationService(session)
+                            evals = await service.get_evaluations(limit=5)
+
+                        html = (
+                            templates.get_template("partials/evaluations_latest.html")
+                            .render({"request": request, "evaluations": evals})
+                            .replace("\n", "")
+                        )
+
+                        yield {"event": "eval-update", "data": html}
+
+                    except asyncio.TimeoutError:
+                        # Keep-alive
+                        yield {"comment": "keep-alive"}
+
+            except asyncio.CancelledError:
+                # Context manager handles unsubscribe in finally block of `async with`
+                raise
 
     return EventSourceResponse(event_generator())

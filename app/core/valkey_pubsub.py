@@ -3,6 +3,8 @@ Valkey Pub/Sub Module
 
 Provides async pub/sub functionality using the redis-py library
 connected to a Valkey server. Valkey is Redis-compatible.
+
+Supports both Pub/Sub (Legacy) and Streams (New Architecture).
 """
 
 import asyncio
@@ -100,3 +102,39 @@ async def valkey_listen(
         await pubsub.unsubscribe(channel)
         await pubsub.aclose()
         logger.info("Unsubscribed from Valkey channel: %s", channel)
+
+
+async def publish_to_stream(
+    channel: str, data: dict, maxlen: int = 1000
+) -> Optional[str]:
+    """
+    Publish a message to a Valkey Stream (XADD).
+
+    Args:
+        channel: Stream key
+        data: Dictionary of data to publish
+        maxlen: Maximum length of the stream (approximate trimming)
+
+    Returns:
+        The ID of the added message.
+    """
+    client = await get_valkey_client()
+    msg_id = await client.xadd(channel, data, maxlen=maxlen, approximate=True)
+    logger.debug("Published to stream %s: %s", channel, msg_id)
+    return msg_id
+
+
+async def stream_read(streams: dict[str, str], count: int = 1, block: int = 0) -> list:
+    """
+    Read from one or more streams (XREAD).
+
+    Args:
+        streams: Dict of {stream_key: last_id}
+        count: Max messages to read per stream
+        block: Block duration in ms (0 for infinite)
+
+    Returns:
+        List of [stream_name, messages]
+    """
+    client = await get_valkey_client()
+    return await client.xread(streams, count=count, block=block)
