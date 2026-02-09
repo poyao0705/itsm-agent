@@ -67,6 +67,7 @@ class BroadcastService:
         """
         Subscribe a client queue to a channel.
         Starts the listener task if this is the first subscriber.
+        Fetches fresh data via handler to avoid stale cache issues.
         """
         if channel not in self._subscribers:
             self._subscribers[channel] = set()
@@ -81,8 +82,20 @@ class BroadcastService:
         # Start listener if not running
         await self._ensure_listener(channel)
 
-        # Send cached snapshot if available
-        if channel in self._cache:
+        # Fetch fresh data via handler on subscribe (not stale cache)
+        # This ensures new clients always get current DB state
+        handler = self._handlers.get(channel)
+        if handler:
+            try:
+                fresh_data = await handler("")  # Empty payload, handler fetches from DB
+                self._put_nowait(queue, fresh_data)
+            except Exception as e:
+                logger.warning("Failed to fetch fresh data on subscribe: %s", e)
+                # Fall back to cache if handler fails
+                if channel in self._cache:
+                    self._put_nowait(queue, self._cache[channel])
+        elif channel in self._cache:
+            # No handler, use cache as fallback
             self._put_nowait(queue, self._cache[channel])
 
     async def unsubscribe(self, channel: str, queue: asyncio.Queue) -> None:
