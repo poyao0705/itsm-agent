@@ -10,6 +10,6 @@
 # }
 
 # Configuration for production (uncomment and replace with your domain)
-3.106.189.64.sslip.io {
+itsm-agent.site {
     reverse_proxy backend:8000
 }
