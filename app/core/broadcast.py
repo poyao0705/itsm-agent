@@ -18,10 +18,14 @@ logger = logging.getLogger(__name__)
 # Constants
 STREAM_KEY = "eval_updates"
 
-# Global Registry
-_subscribers: Dict[str, Set[asyncio.Queue]] = {}
-_listener_task: Optional[asyncio.Task] = None
-_shutdown_event: asyncio.Event = asyncio.Event()
+# Global Registry (encapsulated in a class to avoid global statements)
+class _BroadcasterState:
+    def __init__(self):
+        self.subscribers: Dict[str, Set[asyncio.Queue]] = {}
+        self.listener_task: Optional[asyncio.Task] = None
+        self.shutdown_event: asyncio.Event = asyncio.Event()
+
+_state = _BroadcasterState()
 
 
 class RingQueue(asyncio.Queue):
@@ -55,10 +59,10 @@ async def _multiplexer_loop():
     # Start listening for new messages ($)
     streams = {STREAM_KEY: "$"}
 
-    while not _shutdown_event.is_set():
+    while not _state.shutdown_event.is_set():
         try:
             # Check if we have any subscribers at all
-            if not _subscribers:
+            if not _state.subscribers:
                 await asyncio.sleep(1.0)
                 # Ensure we don't process backlog if re-subscribing later?
                 # Actually, if we just sleep, then when someone subscribes,
@@ -82,10 +86,10 @@ async def _multiplexer_loop():
                     # Mapping: STREAM_KEY -> subscribers["eval_updates"]?
                     # The user code currently uses channel names.
                     # We'll assume the channel name IS the stream key.
-                    if stream_name in _subscribers:
+                    if stream_name in _state.subscribers:
                         # Coalesce: Send one signal per batch to each subscriber
                         # This prevents queue spamming during bursts.
-                        queues = list(_subscribers[stream_name])
+                        queues = list(_state.subscribers[stream_name])
                         last_id = messages[-1][0]
                         # Create a signal object (data is ignored by SSW handler anyway)
                         signal = {"type": "invalidate", "last_id": last_id}
@@ -107,23 +111,21 @@ async def _multiplexer_loop():
 
 async def start_broadcaster():
     """Start the global background listener."""
-    global _listener_task
-    if _listener_task is None or _listener_task.done():
-        _shutdown_event.clear()
-        _listener_task = asyncio.create_task(_multiplexer_loop())
+    if _state.listener_task is None or _state.listener_task.done():
+        _state.shutdown_event.clear()
+        _state.listener_task = asyncio.create_task(_multiplexer_loop())
 
 
 async def stop_broadcaster():
     """Stop the global background listener."""
-    global _listener_task
-    _shutdown_event.set()
-    if _listener_task:
-        _listener_task.cancel()
+    _state.shutdown_event.set()
+    if _state.listener_task:
+        _state.listener_task.cancel()
         try:
-            await _listener_task
+            await _state.listener_task
         except asyncio.CancelledError:
             pass
-        _listener_task = None
+        _state.listener_task = None
 
 
 @asynccontextmanager
@@ -132,21 +134,21 @@ async def subscribe(channel: str) -> AsyncGenerator[RingQueue, None]:
     Context manager to subscribe to a channel.
     Yields an async-iterable RingQueue.
     """
-    if channel not in _subscribers:
-        _subscribers[channel] = set()
+    if channel not in _state.subscribers:
+        _state.subscribers[channel] = set()
 
     # Create a bounded queue for this client
     queue = RingQueue(maxsize=100)
-    _subscribers[channel].add(queue)
+    _state.subscribers[channel].add(queue)
 
     try:
         yield queue
     finally:
         # Cleanup on disconnect (RAII)
-        if channel in _subscribers:
-            _subscribers[channel].discard(queue)
-            if not _subscribers[channel]:
-                del _subscribers[channel]
+        if channel in _state.subscribers:
+            _state.subscribers[channel].discard(queue)
+            if not _state.subscribers[channel]:
+                del _state.subscribers[channel]
 
 
 # -----------------------------------------------------------------------------
