@@ -2,6 +2,7 @@ services:
   backend:
     build: .
     container_name: itsm_agent_backend
+    # local dev setup with db container
     # ports:
     #   - "8000:8000"
     env_file:
