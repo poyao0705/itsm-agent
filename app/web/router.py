@@ -13,7 +13,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.dependencies.database import get_db
-from app.db.session import AsyncSessionLocal
 from app.services.change_management.evaluations import EvaluationService
 
 router = APIRouter()
@@ -86,57 +85,48 @@ async def evaluations_page(
 
 @router.get("/evaluations/sse-stream")
 async def sse_stream(request: Request):
-    """SSE stream that pushes updated evaluation rows via BroadcastService."""
-    from app.core import broadcast
+    """
+    SSE stream that reads from in-memory cache.
+    Zero DB load per client - all clients share cached data.
+    SSE clients wait on an asyncio.Condition inside the cache,
+    so they are only woken *after* the cache updater has written
+    fresh data (no race with the broadcast signal).
+    """
+    from app.core.evaluation_cache import get_evaluation_cache
     import asyncio
 
     async def event_generator():
-        # We use the context manager for robust cleanup
-        async with broadcast.subscribe(broadcast.STREAM_KEY) as queue:
+        cache = get_evaluation_cache()
+        last_version = 0
 
-            # 1. Send initial snapshot (State Synchronization)
-            # Use short-lived session to avoid pinning connection for long stream
-            async with AsyncSessionLocal() as session:
-                service = EvaluationService(session)
-                initial_evals = await service.get_evaluations(limit=5)
+        # Send initial data from cache
+        cached = await cache.get()
+        if cached:
+            yield {"event": "eval-update", "data": cached.html}
+            last_version = cached.version
+        else:
+            # Cache not initialized yet, wait a bit
+            await asyncio.sleep(0.5)
+            cached = await cache.get()
+            if cached:
+                yield {"event": "eval-update", "data": cached.html}
+                last_version = cached.version
+            else:
+                yield {"event": "error", "data": "Cache not ready"}
 
-            html = (
-                templates.get_template("partials/evaluations_latest.html")
-                .render({"request": request, "evaluations": initial_evals})
-                .replace("\n", "")
-            )
-            yield {"event": "eval-update", "data": html}
+        # Wait for cache updates (condition is signalled by cache_updater)
+        while True:
+            if await request.is_disconnected():
+                break
 
-            # 2. Stream loop
-            try:
-                while True:
-                    if await request.is_disconnected():
-                        break
-
-                    try:
-                        # Wait for invalidation signal (coalesced)
-                        await asyncio.wait_for(queue.get(), timeout=15.0)
-
-                        # Fetch fresh data (Self-Healing / Invalidation Pattern)
-                        # Use new short-lived session
-                        async with AsyncSessionLocal() as session:
-                            service = EvaluationService(session)
-                            evals = await service.get_evaluations(limit=5)
-
-                        html = (
-                            templates.get_template("partials/evaluations_latest.html")
-                            .render({"request": request, "evaluations": evals})
-                            .replace("\n", "")
-                        )
-
-                        yield {"event": "eval-update", "data": html}
-
-                    except asyncio.TimeoutError:
-                        # Keep-alive
-                        yield {"comment": "keep-alive"}
-
-            except asyncio.CancelledError:
-                # Context manager handles unsubscribe in finally block of `async with`
-                raise
+            updated = await cache.wait_for_update(last_version, timeout=15.0)
+            if updated:
+                cached = await cache.get()
+                if cached:
+                    yield {"event": "eval-update", "data": cached.html}
+                    last_version = cached.version
+            else:
+                # Timeout — send keep-alive
+                yield {"comment": "keep-alive"}
 
     return EventSourceResponse(event_generator())

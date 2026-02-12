@@ -38,6 +38,9 @@ services:
     depends_on:
       valkey:
         condition: service_healthy
+      # For local dev with db container, uncomment the following and comment out the valkey dependency above
+      # db:
+      #   condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
@@ -70,6 +73,13 @@ services:
     
   #   volumes:
   #     - db_data:/var/lib/postgresql/data
+
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+  #     interval: 1m30s
+  #     timeout: 30s
+  #     retries: 5
+  #     start_period: 30s
 
 volumes:
   db_data:
