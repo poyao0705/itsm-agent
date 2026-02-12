@@ -28,13 +28,13 @@ class EvaluationService:
         """
         statement = (
             select(EvaluationRun)
-            .options(selectinload(EvaluationRun.analysis_results))
-            .order_by(desc(EvaluationRun.start_ts))
+            .options(selectinload(EvaluationRun.analysis_results))  # type: ignore
+            .order_by(desc(EvaluationRun.start_ts))  # type: ignore
             .offset(skip)
             .limit(limit)
         )
         result = await self.session.execute(statement)
-        return result.scalars().all()
+        return result.scalars().all()  # type: ignore
 
     async def count_evaluations(self) -> int:
         """
@@ -87,7 +87,7 @@ class EvaluationService:
 
             # 2. Invoke graph (pure logic, no DB operations in nodes)
             result = await change_management_graph.ainvoke(
-                {"webhook_payload": webhook_payload},
+                {"webhook_payload": webhook_payload},  # type: ignore
                 context=Ctx(db=session_factory),
             )
 
@@ -158,7 +158,7 @@ class EvaluationService:
                 start_ts=datetime.now(timezone.utc),
             )
             .on_conflict_do_nothing(index_elements=[EvaluationRun.evaluation_key])
-            .returning(EvaluationRun.id)
+            .returning(EvaluationRun.id)  # type: ignore[call-overload]
         )
 
         res = await self.session.execute(stmt)
@@ -192,7 +192,7 @@ class EvaluationService:
 
         for finding in analysis_findings:
             ar = AnalysisResult(
-                run_id=run_id,
+                run_id=run_id,  # type: ignore
                 node_name=finding.node_name,
                 reason_code=finding.reason_code,
                 summary=finding.summary,
