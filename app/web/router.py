@@ -6,6 +6,7 @@ This keeps the API layer clean for pure JSON endpoints.
 """
 
 from typing import Annotated
+import asyncio
 
 from fastapi import APIRouter, Depends, Request, Query
 from fastapi.templating import Jinja2Templates
@@ -14,6 +15,8 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.dependencies.database import get_db
 from app.services.change_management.evaluations import EvaluationService
+
+from app.core.evaluation_cache import get_evaluation_cache
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -92,8 +95,6 @@ async def sse_stream(request: Request):
     so they are only woken *after* the cache updater has written
     fresh data (no race with the notifier signal).
     """
-    from app.core.evaluation_cache import get_evaluation_cache
-    import asyncio
 
     async def event_generator():
         cache = get_evaluation_cache()
