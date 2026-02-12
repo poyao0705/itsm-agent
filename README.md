@@ -352,10 +352,3 @@ The app includes an HTMX-powered web dashboard at the root URL (`/`):
 - **Evaluations** (`/evaluations`) — paginated list of all evaluation runs with risk levels, statuses, and analysis details
 
 The dashboard updates in real-time via Server-Sent Events without polling the database — a background cache updater task refreshes an in-memory cache, and all connected SSE clients receive updates simultaneously.
-
----
-
-An air-gapped AI Auditor that enforces ISO 20000 compliance by autonomously analyzing code diffs and blocking risky Jira transitions
-
-run command: 
-`uv run uvicorn app.main:app --reload`
