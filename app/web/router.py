@@ -9,6 +9,7 @@ from typing import Annotated
 import asyncio
 
 from fastapi import APIRouter, Depends, Request, Query
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -34,7 +35,7 @@ def get_evaluation_service(session: SessionDep) -> EvaluationService:
 # -----------------------------------------------------------------------------
 
 
-@router.get("/")
+@router.get("/", response_class=HTMLResponse)
 async def root(request: Request, db: AsyncSession = Depends(get_db)):
     service = EvaluationService(db)
     evals = await service.get_evaluations(limit=5)
@@ -51,7 +52,7 @@ async def root(request: Request, db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.get("/evaluations")
+@router.get("/evaluations", response_class=HTMLResponse)
 async def evaluations_page(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -86,7 +87,7 @@ async def evaluations_page(
 # -----------------------------------------------------------------------------
 
 
-@router.get("/evaluations/sse-stream")
+@router.get("/evaluations/sse-stream", response_class=EventSourceResponse)
 async def sse_stream(request: Request):
     """
     SSE stream that reads from in-memory cache.
