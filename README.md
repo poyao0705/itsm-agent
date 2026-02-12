@@ -43,14 +43,14 @@ Designed around **ISO/IEC 20000** change-control principles, the agent enforces 
 GitHub Webhook (pull_request)
         │
         ▼
-┌──────────────────────┐
+┌───────────────────────┐
 │  FastAPI Application  │
-│  POST /api/v1/github │
+│  POST /api/v1/github  │
 │       /webhook        │
-└──────────┬───────────┘
+└──────────┬────────────┘
            │  verify HMAC signature
            ▼
-┌──────────────────────────────────────────────┐
+┌───────────────────────────────────────────────┐
 │          LangGraph State Machine              │
 │                                               │
 │  read_pr_from_webhook                         │
@@ -62,14 +62,14 @@ GitHub Webhook (pull_request)
 │  policy_rule_analysis  (YAML policy engine)   │
 │       ▼                                       │
 │  post_pr_comment  (GitHub REST API)           │
-└──────────────────┬───────────────────────────┘
+└──────────────────┬────────────────────────────┘
                    │
                    ▼
-┌──────────────────────┐      ┌────────────────────┐
+┌──────────────────────┐      ┌─────────────────────┐
 │   PostgreSQL (async) │◄────►│  Web Dashboard      │
 │   evaluation_run     │      │  HTMX + SSE         │
-│   analysis_result    │      │  /evaluations        │
-└──────────────────────┘      └────────────────────┘
+│   analysis_result    │      │  /evaluations       │
+└──────────────────────┘      └─────────────────────┘
 ```
 
 ---
@@ -83,7 +83,7 @@ GitHub Webhook (pull_request)
 | Database         | PostgreSQL (asyncpg + SQLAlchemy + SQLModel)     |
 | Migrations       | Alembic                                          |
 | GitHub Auth      | GitHub App (JWT + installation tokens via PyJWT) |
-| Frontend         | Jinja2 templates + HTMX + SSE (sse-starlette)   |
+| Frontend         | Jinja2 templates + HTMX + SSE (sse-starlette)    |
 | Reverse Proxy    | Caddy (automatic HTTPS)                          |
 | Package Manager  | uv                                               |
 | Containerisation | Docker + Docker Compose                          |
