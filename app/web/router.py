@@ -90,7 +90,7 @@ async def sse_stream(request: Request):
     Zero DB load per client - all clients share cached data.
     SSE clients wait on an asyncio.Condition inside the cache,
     so they are only woken *after* the cache updater has written
-    fresh data (no race with the broadcast signal).
+    fresh data (no race with the notifier signal).
     """
     from app.core.evaluation_cache import get_evaluation_cache
     import asyncio

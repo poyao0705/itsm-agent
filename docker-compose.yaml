@@ -1,21 +1,4 @@
 services:
-  valkey:
-    image: valkey/valkey:8-alpine
-    container_name: itsm_agent_valkey
-    restart: unless-stopped
-    volumes:
-      - valkey_data:/data
-    healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    expose:
-      - "6379"  # internal only, not exposed to host
-    # Local dev valkey setup
-    # ports:
-    #   - "6379:6379"
-
   backend:
     build: .
     container_name: itsm_agent_backend
@@ -26,7 +9,6 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - GITHUB_APP_PRIVATE_KEY=/app/pr-comment-bot-key.2026-01-28.pem
-      - VALKEY_URL=redis://valkey:6379/0
     volumes:
       - ./pr-comment-bot-key.2026-01-28.pem:/app/pr-comment-bot-key.2026-01-28.pem:ro
     restart: unless-stopped
@@ -35,12 +17,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    depends_on:
-      valkey:
-        condition: service_healthy
-      # For local dev with db container, uncomment the following and comment out the valkey dependency above
-      # db:
-      #   condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
@@ -83,6 +59,5 @@ services:
 
 volumes:
   db_data:
-  valkey_data:
   caddy_data:
   caddy_config:

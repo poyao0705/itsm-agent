@@ -31,7 +31,6 @@ class Settings(BaseSettings):
     # Core
     PROJECT_NAME: str = "ITSM Agent"
     DATABASE_URL: str
-    VALKEY_URL: str = "valkey://localhost:6379"  # Default for local dev
 
     # AI / Model Providers
     OPENAI_API_KEY: str
