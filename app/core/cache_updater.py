@@ -7,16 +7,16 @@ query is executed per wake-up, and all SSE clients share the result.
 """
 
 import asyncio
-import logging
 
 from fastapi.templating import Jinja2Templates
 
 from app.core.evaluation_cache import get_evaluation_cache
+from app.core.logging import get_logger
 from app.core.notifier import wait_for_notification
 from app.db.session import AsyncSessionLocal
 from app.services.change_management.evaluations import EvaluationService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 templates = Jinja2Templates(directory="app/templates")
 
 
