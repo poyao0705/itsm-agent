@@ -125,3 +125,6 @@ venv.bak/
 # Agent
 .agent/
 .gemini/
+
+# Docker
+docker-compose.override.yaml
