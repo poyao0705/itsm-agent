@@ -29,10 +29,12 @@ Demo site: [ITSM Agent](https://itsm-agent.site)
 ## Features
 
 - **GitHub App webhook integration** — receives `pull_request` events and processes them automatically
-- **LangGraph evaluation pipeline** — a multi-node state graph that extracts PR data, validates JIRA tickets, applies policy rules, and posts comments
+- **LangGraph evaluation pipeline** — a multi-node state graph that extracts PR data, validates JIRA tickets, runs LLM semantic analysis, applies policy rules, and posts comments
+- **LLM-powered semantic risk audit** — compares JIRA ticket descriptions against code diffs using OpenAI to detect scope creep and unhandled risks
 - **Deterministic policy engine** — YAML-driven risk classification with glob-based file path matching
+- **JIRA integration** — validates ticket numbers in PR titles and fetches metadata via the JIRA API
 - **Automatic PR commenting** — posts risk assessment summaries directly on pull requests via the GitHub API
-- **Real-time web dashboard** — HTMX + SSE-powered UI displaying live evaluation results with pagination
+- **Real-time web dashboard** — HTMX + SSE-powered UI displaying live evaluation results with pagination (latest per PR)
 - **Async PostgreSQL persistence** — stores evaluation runs and analysis results with full audit trail
 - **Idempotent evaluations** — deduplicates by `owner/repo:pr_number:head_sha:body_hash`
 - **In-memory cache with SSE push** — a single background task refreshes an in-memory cache; all SSE clients share the result with zero per-client DB load
@@ -52,19 +54,22 @@ GitHub Webhook (pull_request)
 └──────────┬────────────┘
            │  verify HMAC signature
            ▼
-┌───────────────────────────────────────────────┐
-│          LangGraph State Machine              │
-│                                               │
-│  read_pr_from_webhook                         │
-│       ▼                                       │
-│  fetch_pr_info  (GitHub REST API)             │
-│       ▼                                       │
-│  analyze_jira_ticket_number                   │
-│       ▼                                       │
-│  policy_rule_analysis  (YAML policy engine)   │
-│       ▼                                       │
-│  post_pr_comment  (GitHub REST API)           │
-└──────────────────┬────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│             LangGraph State Machine                   │
+│                                                       │
+│  read_pr_from_webhook                                 │
+│       ▼                                               │
+│  fetch_pr_info  (GitHub REST API)                     │
+│       ▼                                               │
+│  analyze_jira_ticket_number  (JIRA API validation)    │
+│       ▼                                               │
+│  ┌────────────────────────┬──────────────────────┐    │
+│  │ jira_to_code_llm       │ policy_rule_analysis │    │
+│  │ (OpenAI semantic audit)│ (YAML policy engine) │    │
+│  └────────────┬───────────┴──────────┬───────────┘    │
+│               ▼                      ▼                │
+│              post_pr_comment  (GitHub REST API)       │
+└──────────────────┬────────────────────────────────────┘
                    │
                    ▼
 ┌──────────────────────┐      ┌─────────────────────┐
@@ -126,7 +131,9 @@ GitHub Webhook (pull_request)
 │   │   │   ├── evaluations.py        # Evaluation orchestration service
 │   │   │   ├── nodes/
 │   │   │   │   ├── pr_io.py           # Webhook parsing, PR fetch, comment posting
-│   │   │   │   └── analysis.py       # JIRA ticket & policy rule analysis
+│   │   │   │   ├── analysis.py       # JIRA ticket & policy rule analysis
+│   │   │   │   ├── llm_analysis.py   # LLM semantic risk audit (JIRA vs code diff)
+│   │   │   │   └── utils.py          # Shared node utilities (make_result)
 │   │   │   └── policy/
 │   │   │       ├── policy.yaml        # Risk classification rules
 │   │   │       ├── loader.py          # YAML policy loader
@@ -171,6 +178,11 @@ DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/itsm_agent
 # OpenAI
 OPENAI_API_KEY=sk-...
 
+# JIRA
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=your-email@example.com
+JIRA_API_TOKEN=your-jira-api-token
+
 # GitHub App
 GITHUB_APP_ID=123456
 GITHUB_APP_PRIVATE_KEY=/path/to/private-key.pem   # or inline PEM string
@@ -180,7 +192,10 @@ GITHUB_WEBHOOK_SECRET=your-webhook-secret
 | Variable                 | Required | Description                                                                 |
 | ------------------------ | -------- | --------------------------------------------------------------------------- |
 | `DATABASE_URL`           | Yes      | Async PostgreSQL connection string (`postgresql+asyncpg://...`)             |
-| `OPENAI_API_KEY`         | Yes      | OpenAI API key for LLM-based analysis                                      |
+| `OPENAI_API_KEY`         | Yes      | OpenAI API key for LLM-based semantic risk analysis                        |
+| `JIRA_BASE_URL`          | Yes      | JIRA instance URL (e.g. `https://your-domain.atlassian.net`)               |
+| `JIRA_EMAIL`             | Yes      | Email associated with the JIRA API token                                   |
+| `JIRA_API_TOKEN`         | Yes      | JIRA API token for ticket validation                                       |
 | `GITHUB_APP_ID`          | Yes      | Your GitHub App's ID                                                        |
 | `GITHUB_APP_PRIVATE_KEY` | Yes      | Path to PEM file **or** inline key (escaped `\n` supported)                |
 | `GITHUB_WEBHOOK_SECRET`  | Yes      | Secret used to verify webhook HMAC signatures                              |
@@ -350,7 +365,7 @@ The GitHub webhook endpoint expects:
 
 The app includes an HTMX-powered web dashboard at the root URL (`/`):
 
-- **Home** — shows the 5 most recent evaluations with real-time SSE updates
-- **Evaluations** (`/evaluations`) — paginated list of all evaluation runs with risk levels, statuses, and analysis details
+- **Home** — shows the latest evaluation per PR with real-time SSE updates
+- **Evaluations** (`/evaluations`) — paginated list of latest evaluations per PR with risk levels, statuses, and analysis details
 
 The dashboard updates in real-time via Server-Sent Events without polling the database — a background cache updater task refreshes an in-memory cache, and all connected SSE clients receive updates simultaneously.
