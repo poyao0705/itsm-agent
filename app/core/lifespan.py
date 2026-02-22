@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db.session import engine
-from app.core.cache_updater import cache_updater_task
+from app.services.change_management.cache_updater import cache_updater_task
 
 
 @asynccontextmanager

@@ -5,7 +5,7 @@ from typing import Literal
 from sqlmodel import SQLModel, Field
 
 from app.core.logging import get_logger
-from app.core.runtime import build_llm
+from app.core.llm import default_llm
 from app.services.change_management.state import AgentState
 from app.services.change_management.prompts import SEMANTIC_RISK_AUDIT_PROMPT
 from app.services.change_management.nodes.utils import make_result
@@ -100,7 +100,7 @@ async def jira_to_code_llm_analysis(state: AgentState) -> dict:
         )
 
     # Build the LLM chain with structured output
-    llm = build_llm().with_structured_output(JIRAAnalysisOutput)
+    llm = default_llm.with_structured_output(JIRAAnalysisOutput)
     chain = SEMANTIC_RISK_AUDIT_PROMPT | llm
 
     try:

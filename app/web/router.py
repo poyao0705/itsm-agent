@@ -17,7 +17,7 @@ from sse_starlette.sse import EventSourceResponse
 from app.dependencies.database import get_db
 from app.services.change_management.evaluations import EvaluationService
 
-from app.core.evaluation_cache import get_evaluation_cache
+from app.services.change_management.cache import get_evaluation_cache
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")

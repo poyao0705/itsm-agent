@@ -10,9 +10,9 @@ import asyncio
 
 from fastapi.templating import Jinja2Templates
 
-from app.core.evaluation_cache import get_evaluation_cache
+from app.services.change_management.cache import get_evaluation_cache
 from app.core.logging import get_logger
-from app.core.notifier import wait_for_notification
+from app.services.change_management.notifier import wait_for_notification
 from app.db.session import AsyncSessionLocal
 from app.services.change_management.evaluations import EvaluationService
 

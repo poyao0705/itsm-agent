@@ -7,11 +7,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from app.core.logging import get_logger
-from app.core.notifier import notify_cache_update
+from app.services.change_management.notifier import notify_cache_update
 from app.db.models.evaluation_run import EvaluationRun, EvaluationStatus
 from app.db.models.analysis_result import AnalysisResult
 from app.services.change_management.graph import change_management_graph
-from app.services.change_management.context import Ctx
 
 logger = get_logger(__name__)
 
@@ -147,7 +146,6 @@ class EvaluationService:
             # 2. Invoke graph (pure logic, no DB operations in nodes)
             result = await change_management_graph.ainvoke(
                 {"webhook_payload": webhook_payload},  # type: ignore
-                context=Ctx(db=session_factory),
             )
 
             # 3. Persist analysis results from final state
