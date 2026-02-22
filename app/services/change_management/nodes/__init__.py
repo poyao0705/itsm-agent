@@ -11,6 +11,9 @@ from app.services.change_management.nodes.analysis import (
     analyze_jira_ticket_number,
     policy_rule_analysis,
 )
+from app.services.change_management.nodes.llm_analysis import (
+    jira_to_code_llm_analysis,
+)
 
 __all__ = [
     "read_pr_from_webhook",
@@ -18,4 +21,5 @@ __all__ = [
     "post_pr_comment",
     "analyze_jira_ticket_number",
     "policy_rule_analysis",
+    "jira_to_code_llm_analysis",
 ]

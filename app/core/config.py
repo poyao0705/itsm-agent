@@ -10,7 +10,6 @@ Attributes:
 """
 
 import os
-from typing import Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -39,6 +38,11 @@ class Settings(BaseSettings):
     GITHUB_APP_ID: str
     GITHUB_APP_PRIVATE_KEY: str
     GITHUB_WEBHOOK_SECRET: str
+
+    # JIRA
+    JIRA_BASE_URL: str
+    JIRA_EMAIL: str
+    JIRA_API_TOKEN: str
 
     @field_validator("GITHUB_APP_PRIVATE_KEY", mode="after")
     @classmethod

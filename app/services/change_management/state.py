@@ -51,6 +51,11 @@ class AgentState(SQLModel):
     jira_ticket_number: Optional[str] = Field(
         default=None, description="The JIRA ticket number of the PR."
     )
+    # jira ticket metadata (e.g. priority, components) can be added here as needed
+    jira_ticket_metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Metadata of the linked JIRA ticket (e.g. priority, components).",
+    )
     risk_level: Annotated[str, merge_risk_level] = Field(
         default="LOW", description="The risk level of the PR."
     )

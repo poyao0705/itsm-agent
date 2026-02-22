@@ -1,17 +1,17 @@
 # app/core/runtime.py
 from langchain_openai import ChatOpenAI
-from langchain_core.runnables import Runnable
+from pydantic import SecretStr
 from app.core.config import settings
-from app.services.change_management.utils.github_client import GitHubClient
 
 
-def build_llm() -> Runnable:
+def build_llm() -> ChatOpenAI:
     """
-    Build the LLM Runnable.
+    Build the LLM instance.
     """
     return ChatOpenAI(
-        api_key=settings.OPENAI_API_KEY,
+        api_key=SecretStr(settings.OPENAI_API_KEY),
         model="gpt-5-mini",
         temperature=0,
-        max_tokens=800,
+        max_completion_tokens=1000,
+        max_retries=3,
     )

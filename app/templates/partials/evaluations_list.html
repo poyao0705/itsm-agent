@@ -54,7 +54,7 @@
                     <span class="text-xs opacity-50">Risk:</span>
                     {% if eval.risk_level == 'HIGH' %}
                     <div class="badge badge-error">{{ eval.risk_level }}</div>
-                    {% elif eval.risk_level == 'MEDIUM' %}
+                    {% elif eval.risk_level == 'UNKNOWN' %}
                     <div class="badge badge-warning">{{ eval.risk_level }}</div>
                     {% else %}
                     <div class="badge badge-info">{{ eval.risk_level }}</div>
@@ -71,7 +71,7 @@
                             <span class="badge badge-ghost badge-xs">{{ result.reason_code }}</span>
                             {% if result.risk_level == 'HIGH' %}
                             <span class="badge badge-error badge-xs">{{ result.risk_level }}</span>
-                            {% elif result.risk_level == 'MEDIUM' %}
+                            {% elif result.risk_level == 'UNKNOWN' %}
                             <span class="badge badge-warning badge-xs">{{ result.risk_level }}</span>
                             {% else %}
                             <span class="badge badge-info badge-xs">{{ result.risk_level }}</span>
