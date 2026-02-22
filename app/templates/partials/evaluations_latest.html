@@ -14,7 +14,7 @@
             <tr class="hover">
                 <td class="text-xs font-mono opacity-50">{{ eval.id|string|truncate(8, True, '') }}</td>
                 <td class="font-medium text-xs">{{ eval.display_name }}</td>
-                <td>{{ eval.start_ts.strftime('%Y-%m-%d %H:%M') if eval.start_ts else 'N/A' }}</td>
+                <td><time class="local-time" datetime="{{ eval.start_ts.isoformat() if eval.start_ts else '' }}">{{ eval.start_ts.strftime('%Y-%m-%d %H:%M UTC') if eval.start_ts else 'N/A' }}</time></td>
                 <td>
                     {% if eval.status == 'DONE' %}
                     <div class="badge badge-success badge-sm">DONE</div>
