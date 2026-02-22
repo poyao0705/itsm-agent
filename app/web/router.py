@@ -38,7 +38,7 @@ def get_evaluation_service(session: SessionDep) -> EvaluationService:
 @router.get("/", response_class=HTMLResponse)
 async def root(request: Request, db: AsyncSession = Depends(get_db)):
     service = EvaluationService(db)
-    evals = await service.get_evaluations(limit=5)
+    evals = await service.get_latest_per_pr(limit=5)
 
     # If HTMX request, return the dashboard partial
     if request.headers.get("HX-Request"):
@@ -61,8 +61,8 @@ async def evaluations_page(
 ):
     service = EvaluationService(db)
     skip = (page - 1) * page_size
-    evals = await service.get_evaluations(skip=skip, limit=page_size)
-    total_count = await service.count_evaluations()
+    evals = await service.get_latest_per_pr(skip=skip, limit=page_size)
+    total_count = await service.count_latest_per_pr()
     total_pages = (total_count + page_size - 1) // page_size
 
     context = {

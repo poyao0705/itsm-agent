@@ -21,10 +21,10 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 async def _fetch_and_render(limit: int = 5) -> str:
-    """Fetch latest evaluations from DB and render to HTML."""
+    """Fetch latest evaluations (per PR) from DB and render to HTML."""
     async with AsyncSessionLocal() as session:
         service = EvaluationService(session)
-        evals = await service.get_evaluations(limit=limit)
+        evals = await service.get_latest_per_pr(limit=limit)
 
     return (
         templates.get_template("partials/evaluations_latest.html")

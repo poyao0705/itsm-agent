@@ -24,7 +24,7 @@ class EvaluationService:
         self, skip: int = 0, limit: int = 10
     ) -> List[EvaluationRun]:
         """
-        Fetch evaluation runs with pagination.
+        Fetch evaluation runs with pagination (all runs).
         """
         statement = (
             select(EvaluationRun)
@@ -35,6 +35,65 @@ class EvaluationService:
         )
         result = await self.session.execute(statement)
         return result.scalars().all()  # type: ignore
+
+    def _latest_per_pr_subquery(self):
+        """Subquery: latest start_ts per (owner, repo, pr_number)."""
+        return (
+            select(
+                EvaluationRun.owner,
+                EvaluationRun.repo,
+                EvaluationRun.pr_number,
+                func.max(EvaluationRun.start_ts).label("latest_ts"),
+            )
+            .where(EvaluationRun.owner.isnot(None))  # type: ignore
+            .group_by(EvaluationRun.owner, EvaluationRun.repo, EvaluationRun.pr_number)
+            .subquery()
+        )
+
+    async def get_latest_per_pr(
+        self, skip: int = 0, limit: int = 10
+    ) -> List[EvaluationRun]:
+        """
+        Fetch the latest evaluation run per PR with pagination.
+        """
+        latest_sub = self._latest_per_pr_subquery()
+
+        statement = (
+            select(EvaluationRun)
+            .join(
+                latest_sub,
+                (EvaluationRun.owner == latest_sub.c.owner)
+                & (EvaluationRun.repo == latest_sub.c.repo)
+                & (EvaluationRun.pr_number == latest_sub.c.pr_number)
+                & (EvaluationRun.start_ts == latest_sub.c.latest_ts),
+            )
+            .options(selectinload(EvaluationRun.analysis_results))  # type: ignore
+            .order_by(desc(EvaluationRun.start_ts))  # type: ignore
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self.session.execute(statement)
+        return result.scalars().all()  # type: ignore
+
+    async def count_latest_per_pr(self) -> int:
+        """Count distinct PRs (unique owner/repo/pr_number combinations)."""
+        # pylint: disable-next=not-callable
+        statement = select(func.count()).select_from(
+            select(
+                EvaluationRun.owner,
+                EvaluationRun.repo,
+                EvaluationRun.pr_number,
+            )
+            .where(EvaluationRun.owner.isnot(None))  # type: ignore
+            .group_by(
+                EvaluationRun.owner,
+                EvaluationRun.repo,
+                EvaluationRun.pr_number,
+            )
+            .subquery()
+        )
+        result = await self.session.execute(statement)
+        return result.scalar() or 0
 
     async def count_evaluations(self) -> int:
         """
