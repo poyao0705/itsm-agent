@@ -1,4 +1,5 @@
-# app/core/runtime.py
+"""Runtime utilities for building and managing LLM instances."""
+
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 from app.core.config import settings
