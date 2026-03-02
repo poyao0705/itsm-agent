@@ -29,7 +29,7 @@
                 <td>
                     {% if eval.risk_level == 'HIGH' %}
                     <div class="badge badge-error gap-1">{{ eval.risk_level }}</div>
-                    {% elif eval.risk_level == 'MEDIUM' %}
+                    {% elif eval.risk_level == 'UNKNOWN' %}
                     <div class="badge badge-warning gap-1">{{ eval.risk_level }}</div>
                     {% else %}
                     <div class="badge badge-info gap-1">{{ eval.risk_level }}</div>
