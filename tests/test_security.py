@@ -1,11 +1,11 @@
-"""Tests for app.services.github.security.verify_signature."""
+"""Tests for app.core.security.verify_signature."""
 
 import hmac
 import hashlib
 
 import pytest
 
-from app.services.github.security import verify_signature
+from app.core.security import verify_signature
 
 
 SECRET = "my-webhook-secret"

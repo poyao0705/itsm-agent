@@ -1,3 +1,5 @@
+"""Webhook signature verification utilities."""
+
 import hmac
 import hashlib
 
@@ -17,7 +19,6 @@ def verify_signature(
         True if the signature is valid, False otherwise.
     """
     if not signature_header:
-        # If no signature header is present, we cannot verify authenticity.
         return False
 
     hash_object = hmac.new(

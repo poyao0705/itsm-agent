@@ -31,6 +31,7 @@ async def read_pr_from_webhook(state: AgentState) -> dict:
     repo = repo_data.get("name", "")
     pr_number = int(pr_data.get("number", 0))
     pr_url = pr_data.get("html_url", "")
+    # GitHub App installation ID - used to generate scoped access tokens for this specific app installation
     installation_id = payload.get("installation", {}).get("id")
 
     if not pr_number:
