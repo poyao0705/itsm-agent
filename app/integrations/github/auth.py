@@ -7,7 +7,7 @@ import time
 import jwt
 
 from app.core.config import settings
-from app.core.http_client import http_client
+from app.core import http_client as http_client_module
 
 
 async def get_access_token(installation_id: int) -> str:
@@ -21,7 +21,7 @@ async def get_access_token(installation_id: int) -> str:
     jwt_token = jwt.encode(payload, settings.GITHUB_APP_PRIVATE_KEY, algorithm="RS256")
 
     # Request the Token from GitHub
-    resp = await http_client.post(
+    resp = await http_client_module.http_client.post(
         f"https://api.github.com/app/installations/{installation_id}/access_tokens",
         headers={
             "Authorization": f"Bearer {jwt_token}",

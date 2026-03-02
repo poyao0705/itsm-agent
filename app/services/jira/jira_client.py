@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from app.core.http_client import http_client
+from app.core import http_client as http_client_module
 
 
 class JiraClient:
@@ -24,7 +24,7 @@ class JiraClient:
 
         url = f"{self.base_url}/rest/api/3/issue/{issue_key}"
 
-        response = await http_client.get(
+        response = await http_client_module.http_client.get(
             url,
             auth=self.auth,
             headers={"Accept": "application/json"},

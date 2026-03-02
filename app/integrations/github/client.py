@@ -12,7 +12,7 @@ import asyncio
 import hashlib
 from typing import Dict, List, Optional, Any
 
-from app.core.http_client import http_client
+from app.core import http_client as http_client_module
 
 
 class GitHubClient:
@@ -48,7 +48,7 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
 
-        response = await http_client.get(url, headers=self.headers)
+        response = await http_client_module.http_client.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
@@ -68,7 +68,7 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
 
-        response = await http_client.get(url, headers=self.headers)
+        response = await http_client_module.http_client.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
@@ -91,7 +91,7 @@ class GitHubClient:
             "Accept": "application/vnd.github.v3.diff",  # Request diff format
         }
 
-        response = await http_client.get(url, headers=headers)
+        response = await http_client_module.http_client.get(url, headers=headers)
         response.raise_for_status()
         return response.text
 
@@ -124,8 +124,8 @@ class GitHubClient:
 
         # Fetch both in parallel
         pr_response, files_response = await asyncio.gather(
-            http_client.get(pr_url, headers=self.headers),
-            http_client.get(files_url, headers=self.headers),
+            http_client_module.http_client.get(pr_url, headers=self.headers),
+            http_client_module.http_client.get(files_url, headers=self.headers),
         )
 
         pr_response.raise_for_status()
@@ -177,7 +177,7 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
 
-        response = await http_client.post(
+        response = await http_client_module.http_client.post(
             url, headers=self.headers, json={"body": comment}
         )
         response.raise_for_status()
