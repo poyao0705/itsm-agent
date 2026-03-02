@@ -15,7 +15,7 @@ from app.services.change_management.policy.loader import (
     get_risk_priority,
 )
 from app.services.change_management.nodes.utils import make_result
-import app.services.jira.jira_client as jira_client
+import app.integrations.jira.client as jira_client
 from app.core.config import settings
 
 logger = get_logger(__name__)
