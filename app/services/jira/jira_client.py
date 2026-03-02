@@ -1,7 +1,8 @@
 """A client for interacting with the JIRA API."""
 
 from typing import Any
-import httpx
+
+from app.core.http_client import http_client
 
 
 class JiraClient:
@@ -23,11 +24,10 @@ class JiraClient:
 
         url = f"{self.base_url}/rest/api/3/issue/{issue_key}"
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url,
-                auth=self.auth,
-                headers={"Accept": "application/json"},
-            )
-            response.raise_for_status()
-            return response.json()
+        response = await http_client.get(
+            url,
+            auth=self.auth,
+            headers={"Accept": "application/json"},
+        )
+        response.raise_for_status()
+        return response.json()

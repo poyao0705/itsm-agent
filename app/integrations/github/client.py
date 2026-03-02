@@ -12,7 +12,7 @@ import asyncio
 import hashlib
 from typing import Dict, List, Optional, Any
 
-import httpx
+from app.core.http_client import http_client
 
 
 class GitHubClient:
@@ -48,10 +48,9 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=self.headers)
-            response.raise_for_status()
-            return response.json()
+        response = await http_client.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
 
     async def get_pr_files(
         self, owner: str, repo: str, pr_number: int
@@ -69,10 +68,9 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=self.headers)
-            response.raise_for_status()
-            return response.json()
+        response = await http_client.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
 
     async def get_pr_diff(self, owner: str, repo: str, pr_number: int) -> str:
         """
@@ -93,10 +91,9 @@ class GitHubClient:
             "Accept": "application/vnd.github.v3.diff",  # Request diff format
         }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers)
-            response.raise_for_status()
-            return response.text
+        response = await http_client.get(url, headers=headers)
+        response.raise_for_status()
+        return response.text
 
     async def fetch_pr_info(
         self, owner: str, repo: str, pr_number: int, include_diff: bool = False
@@ -122,21 +119,20 @@ class GitHubClient:
             - pr_body_sha256: SHA256 hash of PR body for idempotency
         """
         # Fetch PR details and files in parallel
-        async with httpx.AsyncClient() as client:
-            pr_url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
-            files_url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
+        pr_url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
+        files_url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
 
-            # Fetch both in parallel
-            pr_response, files_response = await asyncio.gather(
-                client.get(pr_url, headers=self.headers),
-                client.get(files_url, headers=self.headers),
-            )
+        # Fetch both in parallel
+        pr_response, files_response = await asyncio.gather(
+            http_client.get(pr_url, headers=self.headers),
+            http_client.get(files_url, headers=self.headers),
+        )
 
-            pr_response.raise_for_status()
-            files_response.raise_for_status()
+        pr_response.raise_for_status()
+        files_response.raise_for_status()
 
-            pr_data = pr_response.json()
-            files_data = files_response.json()
+        pr_data = pr_response.json()
+        files_data = files_response.json()
 
         # Extract changed files info
         changed_files = [
@@ -181,8 +177,7 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                url, headers=self.headers, json={"body": comment}
-            )
-            response.raise_for_status()
+        response = await http_client.post(
+            url, headers=self.headers, json={"body": comment}
+        )
+        response.raise_for_status()
