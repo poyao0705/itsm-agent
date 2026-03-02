@@ -120,9 +120,11 @@ GitHub Webhook (pull_request)
 │   │       ├── evaluation_run.py      # EvaluationRun ORM model
 │   │       └── analysis_result.py     # AnalysisResult ORM model
 │   ├── integrations/
-│   │   └── github/
-│   │       ├── auth.py                # GitHub App JWT authentication
-│   │       └── client.py             # GitHub REST API client
+│   │   ├── github/
+│   │   │   ├── auth.py                # GitHub App JWT authentication
+│   │   │   └── client.py             # GitHub REST API client
+│   │   └── jira/
+│   │       └── client.py             # JIRA REST API client
 │   ├── services/
 │   │   ├── change_management/
 │   │   │   ├── graph.py               # LangGraph workflow definition
