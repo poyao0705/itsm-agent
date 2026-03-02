@@ -105,10 +105,11 @@ GitHub Webhook (pull_request)
 │   ├── api/
 │   │   ├── api_v1.py                  # API v1 router
 │   │   └── endpoints/
-│   │       ├── github.py              # GitHub webhook endpoint
+│   │       ├── github.py              # GitHub webhook endpoint (signature verification, event routing)
 │   │       └── health.py              # Health check endpoint
 │   ├── core/
 │   │   ├── config.py                  # Pydantic Settings (env vars)
+│   │   ├── security.py               # HMAC SHA-256 signature verification
 │   │   ├── lifespan.py               # App startup/shutdown lifecycle
 │   │   ├── logging.py                # Centralized logging
 │   │   ├── cache_updater.py          # Background cache refresh task
@@ -126,24 +127,21 @@ GitHub Webhook (pull_request)
 │   │   └── jira/
 │   │       └── client.py             # JIRA REST API client
 │   ├── services/
-│   │   ├── change_management/
-│   │   │   ├── graph.py               # LangGraph workflow definition
-│   │   │   ├── state.py              # AgentState model
-│   │   │   ├── context.py            # LangGraph runtime context (DI)
-│   │   │   ├── evaluations.py        # Evaluation orchestration service
-│   │   │   ├── nodes/
-│   │   │   │   ├── pr_io.py           # Webhook parsing, PR fetch, comment posting
-│   │   │   │   ├── analysis.py       # JIRA ticket & policy rule analysis
-│   │   │   │   ├── llm_analysis.py   # LLM semantic risk audit (JIRA vs code diff)
-│   │   │   │   └── utils.py          # Shared node utilities (make_result)
-│   │   │   └── policy/
-│   │   │       ├── policy.yaml        # Risk classification rules
-│   │   │       ├── loader.py          # YAML policy loader
-│   │   │       ├── types.py          # ChangeTypeRule data model
-│   │   │       └── priority.py       # Risk priority helpers
-│   │   └── github/
-│   │       ├── webhook_service.py     # Webhook dispatch & signature verification
-│   │       └── security.py           # HMAC SHA-256 signature verification
+│   │   └── change_management/
+│   │       ├── graph.py               # LangGraph workflow definition
+│   │       ├── state.py              # AgentState model
+│   │       ├── context.py            # LangGraph runtime context (DI)
+│   │       ├── evaluations.py        # Evaluation orchestration service
+│   │       ├── nodes/
+│   │       │   ├── pr_io.py           # Webhook parsing, PR fetch, comment posting
+│   │       │   ├── analysis.py       # JIRA ticket & policy rule analysis
+│   │       │   ├── llm_analysis.py   # LLM semantic risk audit (JIRA vs code diff)
+│   │       │   └── utils.py          # Shared node utilities (make_result)
+│   │       └── policy/
+│   │           ├── policy.yaml        # Risk classification rules
+│   │           ├── loader.py          # YAML policy loader
+│   │           ├── types.py          # ChangeTypeRule data model
+│   │           └── priority.py       # Risk priority helpers
 │   ├── web/
 │   │   └── router.py                 # HTMX pages & SSE stream endpoints
 │   ├── templates/                     # Jinja2 HTML templates
