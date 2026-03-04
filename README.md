@@ -100,59 +100,110 @@ GitHub Webhook (pull_request)
 ## Project Structure
 
 ```
-├── app/
-│   ├── main.py                        # FastAPI app entry point
-│   ├── api/
-│   │   ├── api_v1.py                  # API v1 router
-│   │   └── endpoints/
-│   │       ├── github.py              # GitHub webhook endpoint (signature verification, event routing)
-│   │       └── health.py              # Health check endpoint
-│   ├── core/
-│   │   ├── config.py                  # Pydantic Settings (env vars)
-│   │   ├── security.py               # HMAC SHA-256 signature verification
-│   │   ├── lifespan.py               # App startup/shutdown lifecycle
-│   │   ├── logging.py                # Centralized logging
-│   │   ├── cache_updater.py          # Background cache refresh task
-│   │   ├── evaluation_cache.py       # In-memory evaluation cache
-│   │   └── notifier.py              # In-process asyncio notification
-│   ├── db/
-│   │   ├── session.py                 # Async engine & session factory
-│   │   └── models/
-│   │       ├── evaluation_run.py      # EvaluationRun ORM model
-│   │       └── analysis_result.py     # AnalysisResult ORM model
-│   ├── integrations/
-│   │   ├── github/
-│   │   │   ├── auth.py                # GitHub App JWT authentication
-│   │   │   └── client.py             # GitHub REST API client
-│   │   └── jira/
-│   │       └── client.py             # JIRA REST API client
-│   ├── services/
-│   │   └── change_management/
-│   │       ├── graph.py               # LangGraph workflow definition
-│   │       ├── state.py              # AgentState model
-│   │       ├── context.py            # LangGraph runtime context (DI)
-│   │       ├── evaluations.py        # Evaluation orchestration service
-│   │       ├── nodes/
-│   │       │   ├── pr_io.py           # Webhook parsing, PR fetch, comment posting
-│   │       │   ├── analysis.py       # JIRA ticket & policy rule analysis
-│   │       │   ├── llm_analysis.py   # LLM semantic risk audit (JIRA vs code diff)
-│   │       │   └── utils.py          # Shared node utilities (make_result)
-│   │       └── policy/
-│   │           ├── policy.yaml        # Risk classification rules
-│   │           ├── loader.py          # YAML policy loader
-│   │           ├── types.py          # ChangeTypeRule data model
-│   │           └── priority.py       # Risk priority helpers
-│   ├── web/
-│   │   └── router.py                 # HTMX pages & SSE stream endpoints
-│   ├── templates/                     # Jinja2 HTML templates
-│   └── static/                        # CSS & JS assets
-├── alembic/                           # Database migration scripts
-├── docs/                              # Documentation & specs
-├── docker-compose.yaml
-├── Dockerfile
+├── .dockerignore
+├── .env.example
+├── .gitignore
 ├── Caddyfile
+├── Dockerfile
+├── README.md
+├── alembic.ini
+├── alembic/
+│   ├── README
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/                        # Database migration scripts
+├── app/
+│   ├── __init__.py
+│   ├── main.py                          # FastAPI app entry point
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── api_v1.py                    # API v1 router
+│   │   └── endpoints/
+│   │       ├── __init__.py
+│   │       ├── github.py                # GitHub webhook endpoint (signature verification, event routing)
+│   │       └── health.py                # Health check endpoint
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py                    # Pydantic Settings (env vars)
+│   │   ├── http_client.py              # Shared async HTTP client
+│   │   ├── lifespan.py                 # App startup/shutdown lifecycle
+│   │   ├── llm.py                      # LLM client initialization
+│   │   ├── logging.py                  # Centralized logging
+│   │   └── security.py                 # HMAC SHA-256 signature verification
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── session.py                   # Async engine & session factory
+│   │   └── models/
+│   │       ├── __init__.py
+│   │       ├── evaluation_run.py        # EvaluationRun ORM model
+│   │       └── analysis_result.py       # AnalysisResult ORM model
+│   ├── dependencies/
+│   │   ├── __init__.py
+│   │   └── database.py                 # FastAPI database dependency injection
+│   ├── integrations/
+│   │   ├── __init__.py
+│   │   ├── github/
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py                  # GitHub App JWT authentication
+│   │   │   └── client.py               # GitHub REST API client
+│   │   └── jira/
+│   │       ├── __init__.py
+│   │       └── client.py               # JIRA REST API client
+│   ├── services/
+│   │   ├── __init__.py
+│   │   └── change_management/
+│   │       ├── __init__.py
+│   │       ├── cache.py                 # In-memory evaluation cache
+│   │       ├── cache_updater.py         # Background cache refresh task
+│   │       ├── evaluations.py           # Evaluation orchestration service
+│   │       ├── graph.py                 # LangGraph workflow definition
+│   │       ├── notifier.py             # In-process asyncio notification
+│   │       ├── prompts.py              # LLM prompt templates
+│   │       ├── state.py                # AgentState model
+│   │       ├── nodes/
+│   │       │   ├── __init__.py
+│   │       │   ├── pr_io.py             # Webhook parsing, PR fetch, comment posting
+│   │       │   ├── analysis.py         # JIRA ticket & policy rule analysis
+│   │       │   ├── llm_analysis.py     # LLM semantic risk audit (JIRA vs code diff)
+│   │       │   └── utils.py            # Shared node utilities (make_result)
+│   │       └── policy/
+│   │           ├── __init__.py
+│   │           ├── policy.yaml          # Risk classification rules
+│   │           ├── loader.py            # YAML policy loader
+│   │           ├── types.py            # ChangeTypeRule data model
+│   │           └── priority.py         # Risk priority helpers
+│   ├── web/
+│   │   ├── __init__.py
+│   │   └── router.py                   # HTMX pages & SSE stream endpoints
+│   ├── templates/
+│   │   ├── base.html                    # Base layout template
+│   │   ├── evaluations.html             # Evaluations page template
+│   │   ├── index.html                   # Home page template
+│   │   └── partials/
+│   │       ├── dashboard.html           # Dashboard partial
+│   │       ├── evaluations_latest.html  # Latest evaluations partial
+│   │       └── evaluations_list.html    # Evaluations list partial
+│   └── static/
+│       ├── css/
+│       │   └── vendor/                  # Vendored CSS (DaisyUI)
+│       └── js/
+│           └── vendor/                  # Vendored JS (HTMX, Alpine.js, Tailwind CSS)
+├── docs/
+│   └── SETUP_GUIDE.md
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py                      # Pytest fixtures & shared test setup
+│   ├── test_cache.py                    # Cache tests
+│   ├── test_evaluations.py             # Evaluation service tests
+│   ├── test_github_auth.py             # GitHub auth tests
+│   ├── test_github_client.py           # GitHub client tests
+│   ├── test_jira_client.py             # JIRA client tests
+│   ├── test_nodes.py                   # LangGraph node tests
+│   ├── test_security.py               # HMAC security tests
+│   └── test_webhook_service.py         # Webhook service tests
+├── docker-compose.yaml
 ├── pyproject.toml
-└── alembic.ini
+└── uv.lock
 ```
 
 ---
