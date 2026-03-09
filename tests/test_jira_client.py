@@ -2,7 +2,6 @@
 
 import pytest
 import httpx
-from unittest.mock import MagicMock
 
 from tests.conftest import make_httpx_response
 from app.integrations.jira.client import JiraClient
@@ -18,14 +17,14 @@ TOKEN = "my-api-token"
 # ---------------------------------------------------------------------------
 
 
-def test_init_strips_trailing_slash():
-    client = JiraClient(BASE_URL + "/", EMAIL, TOKEN)
+def test_init_strips_trailing_slash(mock_http_client):
+    client = JiraClient(mock_http_client, BASE_URL + "/", EMAIL, TOKEN)
     assert not client.base_url.endswith("/")
     assert client.base_url == BASE_URL
 
 
-def test_init_stores_auth_tuple():
-    client = JiraClient(BASE_URL, EMAIL, TOKEN)
+def test_init_stores_auth_tuple(mock_http_client):
+    client = JiraClient(mock_http_client, BASE_URL, EMAIL, TOKEN)
     assert client.auth == (EMAIL, TOKEN)
 
 
@@ -43,7 +42,7 @@ async def test_get_issue_success(mock_http_client):
     }
     mock_http_client.get.return_value = make_httpx_response(200, json_data=issue_data)
 
-    client = JiraClient(BASE_URL, EMAIL, TOKEN)
+    client = JiraClient(mock_http_client, BASE_URL, EMAIL, TOKEN)
     result = await client.get_issue("PROJ-42")
 
     assert result == issue_data
@@ -59,7 +58,7 @@ async def test_get_issue_success(mock_http_client):
 async def test_get_issue_url_format(mock_http_client):
     mock_http_client.get.return_value = make_httpx_response(200, json_data={})
 
-    client = JiraClient(BASE_URL, EMAIL, TOKEN)
+    client = JiraClient(mock_http_client, BASE_URL, EMAIL, TOKEN)
     await client.get_issue("XYZ-999")
 
     expected_url = f"{BASE_URL}/rest/api/3/issue/XYZ-999"
@@ -76,7 +75,7 @@ async def test_get_issue_url_format(mock_http_client):
 async def test_get_issue_404_raises(mock_http_client):
     mock_http_client.get.return_value = make_httpx_response(404)
 
-    client = JiraClient(BASE_URL, EMAIL, TOKEN)
+    client = JiraClient(mock_http_client, BASE_URL, EMAIL, TOKEN)
     with pytest.raises(httpx.HTTPStatusError):
         await client.get_issue("NOTFOUND-1")
 
@@ -85,7 +84,7 @@ async def test_get_issue_404_raises(mock_http_client):
 async def test_get_issue_401_raises(mock_http_client):
     mock_http_client.get.return_value = make_httpx_response(401)
 
-    client = JiraClient(BASE_URL, EMAIL, TOKEN)
+    client = JiraClient(mock_http_client, BASE_URL, EMAIL, TOKEN)
     with pytest.raises(httpx.HTTPStatusError):
         await client.get_issue("PROJ-1")
 
@@ -94,6 +93,6 @@ async def test_get_issue_401_raises(mock_http_client):
 async def test_get_issue_500_raises(mock_http_client):
     mock_http_client.get.return_value = make_httpx_response(500)
 
-    client = JiraClient(BASE_URL, EMAIL, TOKEN)
+    client = JiraClient(mock_http_client, BASE_URL, EMAIL, TOKEN)
     with pytest.raises(httpx.HTTPStatusError):
         await client.get_issue("PROJ-1")

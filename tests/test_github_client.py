@@ -1,7 +1,6 @@
 """Tests for app.integrations.github.client.GitHubClient."""
 
 import pytest
-from unittest.mock import AsyncMock, patch
 
 from tests.conftest import make_httpx_response
 from app.integrations.github.client import GitHubClient
@@ -12,14 +11,14 @@ from app.integrations.github.client import GitHubClient
 # ---------------------------------------------------------------------------
 
 
-def test_init_without_token():
-    client = GitHubClient()
+def test_init_without_token(mock_http_client):
+    client = GitHubClient(mock_http_client)
     assert "Authorization" not in client.headers
     assert client.base_url == "https://api.github.com"
 
 
-def test_init_with_token():
-    client = GitHubClient(token="ghp_test")
+def test_init_with_token(mock_http_client):
+    client = GitHubClient(mock_http_client, token="ghp_test")
     assert client.headers["Authorization"] == "token ghp_test"
 
 
@@ -33,7 +32,7 @@ async def test_get_pr_success(mock_http_client):
     pr_data = {"title": "Fix bug", "number": 42}
     mock_http_client.get.return_value = make_httpx_response(200, json_data=pr_data)
 
-    client = GitHubClient(token="tok")
+    client = GitHubClient(mock_http_client, token="tok")
     result = await client.get_pr("octocat", "Hello-World", 42)
 
     assert result == pr_data
@@ -48,7 +47,7 @@ async def test_get_pr_raises_on_http_error(mock_http_client):
 
     mock_http_client.get.return_value = make_httpx_response(404)
 
-    client = GitHubClient()
+    client = GitHubClient(mock_http_client)
     with pytest.raises(httpx.HTTPStatusError):
         await client.get_pr("octocat", "repo", 99)
 
@@ -63,7 +62,7 @@ async def test_get_pr_files_success(mock_http_client):
     files_data = [{"filename": "README.md", "additions": 2, "deletions": 0}]
     mock_http_client.get.return_value = make_httpx_response(200, json_data=files_data)
 
-    client = GitHubClient()
+    client = GitHubClient(mock_http_client)
     result = await client.get_pr_files("owner", "repo", 1)
 
     assert result == files_data
@@ -81,7 +80,7 @@ async def test_get_pr_diff_success(mock_http_client):
     diff_text = "diff --git a/foo.py b/foo.py\n+++ b/foo.py\n+new line"
     mock_http_client.get.return_value = make_httpx_response(200, text=diff_text)
 
-    client = GitHubClient()
+    client = GitHubClient(mock_http_client)
     result = await client.get_pr_diff("owner", "repo", 5)
 
     assert result == diff_text
@@ -121,7 +120,7 @@ async def test_fetch_pr_info_success(mock_http_client):
         make_httpx_response(200, json_data=files_data),
     ]
 
-    client = GitHubClient(token="tok")
+    client = GitHubClient(mock_http_client, token="tok")
     result = await client.fetch_pr_info("owner", "repo", 7)
 
     assert result["pr_title"] == "Add feature"
@@ -143,7 +142,6 @@ async def test_fetch_pr_info_with_diff(mock_http_client):
         "additions": 1,
         "deletions": 0,
     }
-    diff_pr_data = {**pr_data}
     files_data = []
     diff_text = "diff --git a/x b/x"
 
@@ -153,7 +151,7 @@ async def test_fetch_pr_info_with_diff(mock_http_client):
         make_httpx_response(200, text=diff_text),  # get_pr_diff
     ]
 
-    client = GitHubClient()
+    client = GitHubClient(mock_http_client)
     result = await client.fetch_pr_info("owner", "repo", 1, include_diff=True)
 
     assert result.get("diff") == diff_text
@@ -168,7 +166,7 @@ async def test_fetch_pr_info_with_diff(mock_http_client):
 async def test_post_pr_comment_success(mock_http_client):
     mock_http_client.post.return_value = make_httpx_response(201)
 
-    client = GitHubClient(token="tok")
+    client = GitHubClient(mock_http_client, token="tok")
     await client.post_pr_comment("owner", "repo", 3, "LGTM!")
 
     mock_http_client.post.assert_called_once()

@@ -1,14 +1,20 @@
 """A client for interacting with the JIRA API."""
 
 from typing import Any
-
-from app.core import http_client as http_client_module
+import httpx
 
 
 class JiraClient:
     """A reusable utility class for interacting with the JIRA API."""
 
-    def __init__(self, base_url: str, email: str, api_token: str):
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        base_url: str,
+        email: str,
+        api_token: str,
+    ):
+        self.client = client
         self.base_url = base_url.rstrip("/")
         self.auth = (email, api_token)
 
@@ -24,7 +30,7 @@ class JiraClient:
 
         url = f"{self.base_url}/rest/api/3/issue/{issue_key}"
 
-        response = await http_client_module.http_client.get(
+        response = await self.client.get(
             url,
             auth=self.auth,
             headers={"Accept": "application/json"},

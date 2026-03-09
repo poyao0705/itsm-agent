@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from fastapi.testclient import TestClient
 
 from app.api.endpoints.github import handle_github_webhook
 
@@ -47,13 +46,14 @@ def _pr_body(action: str = "opened", merged: bool = False) -> bytes:
 async def test_handle_webhook_invalid_signature_raises_403():
     body = b'{"action": "opened"}'
     bad_sig = "sha256=0000000000000000000000000000000000000000000000000000000000000000"
+    mock_service = AsyncMock()
 
     with pytest.raises(HTTPException) as exc_info:
         await handle_github_webhook(
             request=_make_request(body),
+            service=mock_service,
             x_github_event="pull_request",
             x_hub_signature_256=bad_sig,
-            session=AsyncMock(),
         )
 
     assert exc_info.value.status_code == 403
@@ -75,9 +75,9 @@ async def test_handle_webhook_merged_pr_is_ignored():
     with _PATCH_SIG_OK:
         result = await handle_github_webhook(
             request=_make_request(body),
+            service=AsyncMock(),
             x_github_event="pull_request",
             x_hub_signature_256="any-sig",
-            session=AsyncMock(),
         )
     assert result == {"message": "PR merged, ignored"}
 
@@ -89,9 +89,9 @@ async def test_handle_webhook_non_pr_event_is_ignored():
     with _PATCH_SIG_OK:
         result = await handle_github_webhook(
             request=_make_request(body),
+            service=AsyncMock(),
             x_github_event="push",
             x_hub_signature_256="any-sig",
-            session=AsyncMock(),
         )
     assert result["message"] == "Event ignored"
     assert result["event"] == "push"
@@ -105,18 +105,12 @@ async def test_handle_webhook_pull_request_returns_state():
     mock_service = AsyncMock()
     mock_service.run_evaluation_workflow = AsyncMock(return_value=fake_state)
 
-    with (
-        _PATCH_SIG_OK,
-        patch(
-            "app.api.endpoints.github.EvaluationService",
-            return_value=mock_service,
-        ),
-    ):
+    with _PATCH_SIG_OK:
         result = await handle_github_webhook(
             request=_make_request(body),
+            service=mock_service,
             x_github_event="pull_request",
             x_hub_signature_256="any-sig",
-            session=AsyncMock(),
         )
 
     assert result["message"] == "PR processed"
@@ -132,19 +126,13 @@ async def test_handle_webhook_pull_request_workflow_error_raises_500():
         side_effect=RuntimeError("graph failed")
     )
 
-    with (
-        _PATCH_SIG_OK,
-        patch(
-            "app.api.endpoints.github.EvaluationService",
-            return_value=mock_service,
-        ),
-    ):
+    with _PATCH_SIG_OK:
         with pytest.raises(HTTPException) as exc_info:
             await handle_github_webhook(
                 request=_make_request(body),
+                service=mock_service,
                 x_github_event="pull_request",
                 x_hub_signature_256="any-sig",
-                session=AsyncMock(),
             )
 
     assert exc_info.value.status_code == 500
@@ -158,8 +146,8 @@ async def test_handle_webhook_invalid_json_body():
     with _PATCH_SIG_OK:
         result = await handle_github_webhook(
             request=_make_request(body),
+            service=AsyncMock(),
             x_github_event="push",
             x_hub_signature_256="any-sig",
-            session=AsyncMock(),
         )
     assert "error" in result

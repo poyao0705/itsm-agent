@@ -11,20 +11,21 @@ REST is chosen over GraphQL because:
 import asyncio
 import hashlib
 from typing import Dict, List, Optional, Any
-
-from app.core import http_client as http_client_module
+import httpx
 
 
 class GitHubClient:
     """Client for interacting with GitHub REST API."""
 
-    def __init__(self, token: Optional[str] = None):
+    def __init__(self, client: httpx.AsyncClient, token: Optional[str] = None):
         """
         Initialize GitHub client.
 
         Args:
+            client: Shared HTTP client.
             token: GitHub Personal Access Token or GitHub App token
         """
+        self.client = client
         self.token = token
         self.base_url = "https://api.github.com"
         self.headers = {
@@ -48,7 +49,7 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
 
-        response = await http_client_module.http_client.get(url, headers=self.headers)
+        response = await self.client.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
@@ -68,7 +69,7 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files"
 
-        response = await http_client_module.http_client.get(url, headers=self.headers)
+        response = await self.client.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
@@ -91,7 +92,7 @@ class GitHubClient:
             "Accept": "application/vnd.github.v3.diff",  # Request diff format
         }
 
-        response = await http_client_module.http_client.get(url, headers=headers)
+        response = await self.client.get(url, headers=headers)
         response.raise_for_status()
         return response.text
 
@@ -124,8 +125,8 @@ class GitHubClient:
 
         # Fetch both in parallel
         pr_response, files_response = await asyncio.gather(
-            http_client_module.http_client.get(pr_url, headers=self.headers),
-            http_client_module.http_client.get(files_url, headers=self.headers),
+            self.client.get(pr_url, headers=self.headers),
+            self.client.get(files_url, headers=self.headers),
         )
 
         pr_response.raise_for_status()
@@ -177,7 +178,7 @@ class GitHubClient:
         """
         url = f"{self.base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
 
-        response = await http_client_module.http_client.post(
+        response = await self.client.post(
             url, headers=self.headers, json={"body": comment}
         )
         response.raise_for_status()

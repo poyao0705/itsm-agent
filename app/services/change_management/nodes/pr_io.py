@@ -4,11 +4,21 @@ PR I/O nodes for the Change Management Agent.
 These nodes handle reading from webhooks, fetching PR info, and posting comments.
 """
 
+import httpx
+
 from app.core.logging import get_logger
 from app.services.change_management.state import AgentState
 from app.integrations.github import GitHubClient, get_access_token
 
 logger = get_logger(__name__)
+
+
+def _get_http_client(state: AgentState) -> httpx.AsyncClient:
+    """Return the HTTP client injected into graph state."""
+    client = state.http_client
+    if client is None:
+        raise RuntimeError("http_client not provided in graph state")
+    return client
 
 
 async def read_pr_from_webhook(state: AgentState) -> dict:
@@ -54,15 +64,17 @@ async def fetch_pr_info(state: AgentState) -> dict:
         logger.warning("Missing required PR identifiers, skipping fetch.")
         return {}
 
+    client = _get_http_client(state)
+
     # Use the installation token if available
     token = None
     if state.installation_id:
         try:
-            token = await get_access_token(state.installation_id)
+            token = await get_access_token(client, state.installation_id)
         except Exception as e:
             logger.error("Failed to get installation token: %s", e)
 
-    pr_info = await GitHubClient(token).fetch_pr_info(
+    pr_info = await GitHubClient(client, token).fetch_pr_info(
         state.owner, state.repo, state.pr_number, include_diff=True
     )
     return {"pr_info": pr_info}
@@ -78,13 +90,15 @@ async def post_pr_comment(state: AgentState) -> dict:
 
     comment = "\n".join([res.summary for res in analysis_results])
 
+    client = _get_http_client(state)
+
     # We want to post a comment.
     if state.installation_id:
         try:
-            token = await get_access_token(state.installation_id)
+            token = await get_access_token(client, state.installation_id)
 
-            client = GitHubClient(token)
-            await client.post_pr_comment(
+            github_client = GitHubClient(client, token)
+            await github_client.post_pr_comment(
                 state.owner,
                 state.repo,
                 state.pr_number,

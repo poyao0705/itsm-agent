@@ -1,5 +1,6 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from datetime import datetime, timezone
+import httpx
 from sqlmodel import select, func
 from sqlalchemy import desc
 from sqlalchemy.orm import selectinload
@@ -16,8 +17,11 @@ logger = get_logger(__name__)
 
 
 class EvaluationService:
-    def __init__(self, session: AsyncSession):
+    def __init__(
+        self, session: AsyncSession, http_client: Optional[httpx.AsyncClient] = None
+    ):
         self.session = session
+        self.http_client = http_client
 
     async def get_evaluations(
         self, skip: int = 0, limit: int = 10
@@ -133,9 +137,6 @@ class EvaluationService:
             raise ValueError("Cannot extract evaluation context from webhook payload")
 
         run_id: Optional[str] = None
-        evaluation_key = context[
-            "evaluation_key"
-        ]  # keys still need this for error logging/checks
 
         try:
             # 1. Create EvaluationRun record with context
@@ -143,7 +144,10 @@ class EvaluationService:
 
             # 2. Invoke graph (pure logic, no DB operations in nodes)
             result = await change_management_graph.ainvoke(
-                {"webhook_payload": webhook_payload},  # type: ignore
+                {
+                    "webhook_payload": webhook_payload,
+                    "http_client": self.http_client,
+                },  # type: ignore[arg-type]
             )
 
             # 3. Persist analysis results from final state

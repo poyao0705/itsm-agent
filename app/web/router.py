@@ -11,10 +11,9 @@ import asyncio
 from fastapi import APIRouter, Depends, Request, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlmodel.ext.asyncio.session import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.dependencies.database import get_db
+from app.dependencies.services import get_evaluation_service
 from app.services.change_management.evaluations import EvaluationService
 
 from app.services.change_management.cache import get_evaluation_cache
@@ -22,12 +21,7 @@ from app.services.change_management.cache import get_evaluation_cache
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-SessionDep = Annotated[AsyncSession, Depends(get_db)]
-
-
-def get_evaluation_service(session: SessionDep) -> EvaluationService:
-    """Get evaluation service (Dependency Injection)."""
-    return EvaluationService(session)
+EvaluationServiceDep = Annotated[EvaluationService, Depends(get_evaluation_service)]
 
 
 # -----------------------------------------------------------------------------
@@ -36,8 +30,7 @@ def get_evaluation_service(session: SessionDep) -> EvaluationService:
 
 
 @router.get("/", response_class=HTMLResponse)
-async def root(request: Request, db: AsyncSession = Depends(get_db)):
-    service = EvaluationService(db)
+async def root(request: Request, service: EvaluationServiceDep):
     evals = await service.get_latest_per_pr(limit=5)
 
     # If HTMX request, return the dashboard partial
@@ -55,11 +48,10 @@ async def root(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/evaluations", response_class=HTMLResponse)
 async def evaluations_page(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    service: EvaluationServiceDep,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
 ):
-    service = EvaluationService(db)
     skip = (page - 1) * page_size
     evals = await service.get_latest_per_pr(skip=skip, limit=page_size)
     total_count = await service.count_latest_per_pr()

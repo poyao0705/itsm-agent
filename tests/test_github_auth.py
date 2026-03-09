@@ -1,7 +1,7 @@
 """Tests for app.integrations.github.auth.get_access_token."""
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import patch
 
 import httpx
 
@@ -24,7 +24,7 @@ async def test_get_access_token_success(mock_http_client):
     ):
         from app.integrations.github.auth import get_access_token
 
-        token = await get_access_token(installation_id=12345)
+        token = await get_access_token(mock_http_client, installation_id=12345)
 
     assert token == "ghs_installationtoken"
     mock_http_client.post.assert_called_once()
@@ -46,7 +46,7 @@ async def test_get_access_token_http_error_raises(mock_http_client):
         from app.integrations.github.auth import get_access_token
 
         with pytest.raises(httpx.HTTPStatusError):
-            await get_access_token(installation_id=999)
+            await get_access_token(mock_http_client, installation_id=999)
 
 
 @pytest.mark.asyncio
@@ -57,14 +57,14 @@ async def test_get_access_token_builds_correct_jwt_payload(mock_http_client):
     )
     captured_payload = {}
 
-    def fake_encode(payload, *args, **kwargs):
+    def fake_encode(payload, *_args, **_kwargs):
         captured_payload.update(payload)
         return "fake.jwt"
 
     with patch("app.integrations.github.auth.jwt.encode", side_effect=fake_encode):
         from app.integrations.github.auth import get_access_token
 
-        await get_access_token(1)
+        await get_access_token(mock_http_client, 1)
 
     assert "iat" in captured_payload
     assert "exp" in captured_payload

@@ -62,6 +62,10 @@ class AgentState(SQLModel):
     installation_id: Optional[int] = Field(
         default=None, description="The GitHub App installation ID."
     )
+    http_client: Optional[Any] = Field(
+        default=None,
+        description="Shared HTTP client injected at graph invocation time.",
+    )
     analysis_results: Annotated[List[AnalysisResultCreate], operator.add] = Field(
         default_factory=list, description="The analysis results of the agent."
     )

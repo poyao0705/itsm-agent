@@ -5,22 +5,21 @@ import httpx
 
 from app.db.session import engine
 from app.services.change_management.cache_updater import cache_updater_task
-import app.core.http_client as http_client_module
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app: FastAPI):
     """
     Lifespan function for the FastAPI application.
     Handles startup and shutdown events for application services.
     """
     # 1. Create shared HTTP client (connection pool reused across all requests)
-    http_client_module.http_client = httpx.AsyncClient(
+    app.state.http_client = httpx.AsyncClient(
         timeout=httpx.Timeout(
-            connect=5.0,   # Fail fast if target is unreachable
-            read=30.0,     # Large diffs may take time
+            connect=5.0,  # Fail fast if target is unreachable
+            read=30.0,  # Large diffs may take time
             write=10.0,
-            pool=10.0,     # Don't wait too long for a free connection
+            pool=10.0,  # Don't wait too long for a free connection
         ),
         limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
     )
@@ -38,7 +37,7 @@ async def lifespan(_app: FastAPI):
         pass
 
     # 4. Close shared HTTP client
-    await http_client_module.http_client.aclose()
+    await app.state.http_client.aclose()
 
     # 5. Dispose Database Engine
     await engine.dispose()

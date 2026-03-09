@@ -1,28 +1,29 @@
 """GitHub webhook endpoint: signature verification, payload parsing, and event routing."""
 
 import json
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.security import verify_signature
-from app.db.session import AsyncSessionLocal
-from app.dependencies.database import get_db
+from app.dependencies.services import get_evaluation_service
 from app.services.change_management.evaluations import EvaluationService
 
 logger = get_logger(__name__)
 
 router = APIRouter()
 
+EvaluationServiceDep = Annotated[EvaluationService, Depends(get_evaluation_service)]
+
 
 @router.post("/webhook")
 async def handle_github_webhook(
     request: Request,
+    service: EvaluationServiceDep,
     x_github_event: str = Header(...),
     x_hub_signature_256: str = Header(None),
-    session: AsyncSession = Depends(get_db),
 ):
     """
     Handle GitHub webhook requests.
@@ -55,8 +56,6 @@ async def handle_github_webhook(
         if action == "closed" and is_merged:
             return {"message": "PR merged, ignored"}
 
-        # Run evaluation workflow with injected session
-        service = EvaluationService(session)
         try:
             result = await service.run_evaluation_workflow(
                 webhook_payload=payload,

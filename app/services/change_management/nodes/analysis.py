@@ -24,6 +24,14 @@ _NODE_JIRA_TICKET = "analyze_jira_ticket_number"
 _NODE_POLICY = "policy_rule_analysis"
 
 
+def _get_http_client(state: AgentState) -> httpx.AsyncClient:
+    """Return the HTTP client injected into graph state."""
+    client = state.http_client
+    if client is None:
+        raise RuntimeError("http_client not provided in graph state")
+    return client
+
+
 async def analyze_jira_ticket_number(state: AgentState) -> dict:
     """Analyze the JIRA ticket number in the PR title and validate via JIRA API."""
     if not state.pr_info:
@@ -61,6 +69,7 @@ async def analyze_jira_ticket_number(state: AgentState) -> dict:
 
     # Validate ticket via JIRA API
     jira_client_instance = jira_client.JiraClient(
+        client=_get_http_client(state),
         base_url=settings.JIRA_BASE_URL,
         email=settings.JIRA_EMAIL,
         api_token=settings.JIRA_API_TOKEN,

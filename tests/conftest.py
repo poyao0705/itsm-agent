@@ -29,21 +29,15 @@ import pytest
 import httpx
 from unittest.mock import AsyncMock, MagicMock
 
-import app.core.http_client as http_client_module
 
-
-@pytest.fixture(autouse=True)
-def mock_http_client(monkeypatch):
+@pytest.fixture
+def mock_http_client():
     """
-    Replace the global httpx.AsyncClient singleton with a MagicMock for every test.
-
-    Individual tests can configure `.get.return_value` / `.post.return_value`
-    on the returned mock as needed.
+    Return a mock httpx.AsyncClient for explicit injection in tests.
     """
     client = MagicMock(spec=httpx.AsyncClient)
     client.get = AsyncMock()
     client.post = AsyncMock()
-    monkeypatch.setattr(http_client_module, "http_client", client)
     return client
 
 

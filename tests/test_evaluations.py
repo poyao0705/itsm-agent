@@ -5,13 +5,12 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.change_management.evaluations import EvaluationService
-from app.db.models.evaluation_run import EvaluationStatus
 
 
-def _make_service():
+def _make_service(http_client=None):
     """Return an EvaluationService with a stubbed AsyncSession."""
     session = AsyncMock()
-    return EvaluationService(session)
+    return EvaluationService(session, http_client=http_client)
 
 
 def _make_pr_payload(
@@ -132,9 +131,10 @@ async def test_count_evaluations_returns_zero_on_none():
 
 
 @pytest.mark.asyncio
-async def test_run_evaluation_workflow_reraises_on_graph_error():
-    svc = _make_service()
+async def test_run_evaluation_workflow_reraises_on_graph_error(mock_http_client):
+    svc = _make_service(mock_http_client)
     payload = _make_pr_payload()
+    mark_error = AsyncMock()
 
     with (
         patch.object(
@@ -151,19 +151,22 @@ async def test_run_evaluation_workflow_reraises_on_graph_error():
         patch(
             "app.services.change_management.evaluations.change_management_graph"
         ) as mock_graph,
-        patch.object(svc, "_mark_evaluation_error", AsyncMock()),
+        patch.object(svc, "_mark_evaluation_error", mark_error),
     ):
         mock_graph.ainvoke = AsyncMock(side_effect=RuntimeError("graph boom"))
 
         with pytest.raises(RuntimeError, match="graph boom"):
             await svc.run_evaluation_workflow(payload)
 
-        svc._mark_evaluation_error.assert_called_once_with("uuid-123", "graph boom")
+        mock_graph.ainvoke.assert_awaited_once_with(
+            {"webhook_payload": payload, "http_client": mock_http_client}
+        )
+        mark_error.assert_awaited_once_with("uuid-123", "graph boom")
 
 
 @pytest.mark.asyncio
-async def test_run_evaluation_workflow_success():
-    svc = _make_service()
+async def test_run_evaluation_workflow_success(mock_http_client):
+    svc = _make_service(mock_http_client)
     payload = _make_pr_payload()
     fake_state = {"risk_level": "LOW", "analysis_results": []}
 
@@ -192,5 +195,8 @@ async def test_run_evaluation_workflow_success():
         result = await svc.run_evaluation_workflow(payload)
 
         assert result == fake_state
+        mock_graph.ainvoke.assert_awaited_once_with(
+            {"webhook_payload": payload, "http_client": mock_http_client}
+        )
         mock_persist.assert_called_once_with("uuid-456", fake_state)
         mock_finalize.assert_called_once_with("uuid-456", fake_state)

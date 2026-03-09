@@ -1,7 +1,7 @@
 """Tests for change management graph nodes: utils and pr_io."""
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 from app.services.change_management.nodes.utils import make_result
 from app.services.change_management.nodes.pr_io import (
@@ -59,8 +59,8 @@ def test_make_result_empty_details():
 # ===========================================================================
 
 
-def _make_state(payload: dict | None = None) -> AgentState:
-    return AgentState(webhook_payload=payload)
+def _make_state(payload: dict | None = None, http_client=None) -> AgentState:
+    return AgentState(webhook_payload=payload, http_client=http_client)
 
 
 @pytest.mark.asyncio
@@ -160,7 +160,9 @@ async def test_fetch_pr_info_calls_github_client(mock_http_client):
     }
     mock_http_client.get.side_effect = _pr_get_side_effects(pr_data)
 
-    state = AgentState(owner="org", repo="repo", pr_number=1)
+    state = AgentState(
+        owner="org", repo="repo", pr_number=1, http_client=mock_http_client
+    )
 
     # No installation_id → token is None, no auth call
     with patch(
@@ -184,7 +186,13 @@ async def test_fetch_pr_info_uses_installation_token(mock_http_client):
     }
     mock_http_client.get.side_effect = _pr_get_side_effects(pr_data)
 
-    state = AgentState(owner="org", repo="repo", pr_number=2, installation_id=555)
+    state = AgentState(
+        owner="org",
+        repo="repo",
+        pr_number=2,
+        installation_id=555,
+        http_client=mock_http_client,
+    )
 
     with patch(
         "app.services.change_management.nodes.pr_io.get_access_token",
@@ -208,7 +216,13 @@ async def test_fetch_pr_info_continues_if_token_fetch_fails(mock_http_client):
     }
     mock_http_client.get.side_effect = _pr_get_side_effects(pr_data)
 
-    state = AgentState(owner="o", repo="r", pr_number=9, installation_id=123)
+    state = AgentState(
+        owner="o",
+        repo="r",
+        pr_number=9,
+        installation_id=123,
+        http_client=mock_http_client,
+    )
 
     with patch(
         "app.services.change_management.nodes.pr_io.get_access_token",
