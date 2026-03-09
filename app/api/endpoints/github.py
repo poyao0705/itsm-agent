@@ -60,7 +60,6 @@ async def handle_github_webhook(
         try:
             result = await service.run_evaluation_workflow(
                 webhook_payload=payload,
-                session_factory=AsyncSessionLocal,
             )
             return {"message": "PR processed", "state": result}
         except Exception as e:

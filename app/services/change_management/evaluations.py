@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlmodel import select, func
 from sqlalchemy import desc
 from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from app.core.logging import get_logger
@@ -106,7 +106,6 @@ class EvaluationService:
     async def run_evaluation_workflow(
         self,
         webhook_payload: dict,
-        session_factory: async_sessionmaker[AsyncSession],
     ) -> dict:
         """
         Run the complete evaluation workflow with persistence.
@@ -121,7 +120,6 @@ class EvaluationService:
 
         Args:
             webhook_payload: GitHub webhook payload
-            session_factory: Async session factory for graph context
 
         Returns:
             Final graph state dict

@@ -156,7 +156,7 @@ async def test_run_evaluation_workflow_reraises_on_graph_error():
         mock_graph.ainvoke = AsyncMock(side_effect=RuntimeError("graph boom"))
 
         with pytest.raises(RuntimeError, match="graph boom"):
-            await svc.run_evaluation_workflow(payload, session_factory=AsyncMock())
+            await svc.run_evaluation_workflow(payload)
 
         svc._mark_evaluation_error.assert_called_once_with("uuid-123", "graph boom")
 
@@ -189,7 +189,7 @@ async def test_run_evaluation_workflow_success():
         patch.object(svc, "_finalize_evaluation_run", mock_finalize),
     ):
         mock_graph.ainvoke = AsyncMock(return_value=fake_state)
-        result = await svc.run_evaluation_workflow(payload, session_factory=AsyncMock())
+        result = await svc.run_evaluation_workflow(payload)
 
         assert result == fake_state
         mock_persist.assert_called_once_with("uuid-456", fake_state)
