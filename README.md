@@ -79,6 +79,23 @@ GitHub Webhook (pull_request)
 └──────────────────────┘      └─────────────────────┘
 ```
 
+### Shared Dependency Flow
+
+The application owns a single `httpx.AsyncClient` for the full process lifetime.
+
+```text
+FastAPI lifespan
+   -> app.state.http_client
+      -> get_http_client(request)
+         -> get_github_client(client)
+         -> get_jira_client(client)
+         -> get_evaluation_service(session, client)
+            -> LangGraph state.http_client
+               -> GitHub and JIRA nodes
+```
+
+This keeps outbound HTTP usage explicit and testable. Route handlers use FastAPI dependencies, while LangGraph nodes receive the shared client through `AgentState` when the evaluation workflow is invoked.
+
 ---
 
 ## Tech Stack
@@ -125,11 +142,10 @@ GitHub Webhook (pull_request)
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── config.py                    # Pydantic Settings (env vars)
-│   │   ├── http_client.py              # Shared async HTTP client
-│   │   ├── lifespan.py                 # App startup/shutdown lifecycle
-│   │   ├── llm.py                      # LLM client initialization
-│   │   ├── logging.py                  # Centralized logging
-│   │   └── security.py                 # HMAC SHA-256 signature verification
+│   │   ├── lifespan.py                  # App startup/shutdown lifecycle and shared httpx client
+│   │   ├── llm.py                       # LLM client initialization
+│   │   ├── logging.py                   # Centralized logging
+│   │   └── security.py                  # HMAC SHA-256 signature verification
 │   ├── db/
 │   │   ├── __init__.py
 │   │   ├── session.py                   # Async engine & session factory
@@ -139,16 +155,18 @@ GitHub Webhook (pull_request)
 │   │       └── analysis_result.py       # AnalysisResult ORM model
 │   ├── dependencies/
 │   │   ├── __init__.py
-│   │   └── database.py                 # FastAPI database dependency injection
+│   │   ├── database.py                  # FastAPI database dependency
+│   │   ├── http.py                      # Shared AsyncClient dependency from app.state
+│   │   └── services.py                  # Service/integration constructors for DI
 │   ├── integrations/
 │   │   ├── __init__.py
 │   │   ├── github/
 │   │   │   ├── __init__.py
-│   │   │   ├── auth.py                  # GitHub App JWT authentication
-│   │   │   └── client.py               # GitHub REST API client
+│   │   │   ├── auth.py                  # GitHub App JWT exchange using injected httpx client
+│   │   │   └── client.py                # GitHub REST API client with explicit AsyncClient dependency
 │   │   └── jira/
 │   │       ├── __init__.py
-│   │       └── client.py               # JIRA REST API client
+│   │       └── client.py                # JIRA REST API client with explicit AsyncClient dependency
 │   ├── services/
 │   │   ├── __init__.py
 │   │   └── change_management/
@@ -157,24 +175,24 @@ GitHub Webhook (pull_request)
 │   │       ├── cache_updater.py         # Background cache refresh task
 │   │       ├── evaluations.py           # Evaluation orchestration service
 │   │       ├── graph.py                 # LangGraph workflow definition
-│   │       ├── notifier.py             # In-process asyncio notification
-│   │       ├── prompts.py              # LLM prompt templates
-│   │       ├── state.py                # AgentState model
+│   │       ├── notifier.py              # In-process asyncio notification
+│   │       ├── prompts.py               # LLM prompt templates
+│   │       ├── state.py                 # AgentState model, including shared HTTP client field for graph nodes
 │   │       ├── nodes/
 │   │       │   ├── __init__.py
 │   │       │   ├── pr_io.py             # Webhook parsing, PR fetch, comment posting
-│   │       │   ├── analysis.py         # JIRA ticket & policy rule analysis
-│   │       │   ├── llm_analysis.py     # LLM semantic risk audit (JIRA vs code diff)
-│   │       │   └── utils.py            # Shared node utilities (make_result)
+│   │       │   ├── analysis.py          # JIRA ticket and policy rule analysis
+│   │       │   ├── llm_analysis.py      # LLM semantic risk audit (JIRA vs code diff)
+│   │       │   └── utils.py             # Shared node utilities (make_result)
 │   │       └── policy/
 │   │           ├── __init__.py
 │   │           ├── policy.yaml          # Risk classification rules
 │   │           ├── loader.py            # YAML policy loader
-│   │           ├── types.py            # ChangeTypeRule data model
-│   │           └── priority.py         # Risk priority helpers
+│   │           ├── types.py             # ChangeTypeRule data model
+│   │           └── priority.py          # Risk priority helpers
 │   ├── web/
 │   │   ├── __init__.py
-│   │   └── router.py                   # HTMX pages & SSE stream endpoints
+│   │   └── router.py                    # HTMX pages and SSE stream endpoints
 │   ├── templates/
 │   │   ├── base.html                    # Base layout template
 │   │   ├── evaluations.html             # Evaluations page template
@@ -194,17 +212,19 @@ GitHub Webhook (pull_request)
 │   ├── __init__.py
 │   ├── conftest.py                      # Pytest fixtures & shared test setup
 │   ├── test_cache.py                    # Cache tests
-│   ├── test_evaluations.py             # Evaluation service tests
-│   ├── test_github_auth.py             # GitHub auth tests
-│   ├── test_github_client.py           # GitHub client tests
-│   ├── test_jira_client.py             # JIRA client tests
-│   ├── test_nodes.py                   # LangGraph node tests
-│   ├── test_security.py               # HMAC security tests
+│   ├── test_evaluations.py              # Evaluation service tests
+│   ├── test_github_auth.py              # GitHub auth tests
+│   ├── test_github_client.py            # GitHub client tests
+│   ├── test_jira_client.py              # JIRA client tests
+│   ├── test_nodes.py                    # LangGraph node tests
+│   ├── test_security.py                 # HMAC security tests
 │   └── test_webhook_service.py         # Webhook service tests
 ├── docker-compose.yaml
 ├── pyproject.toml
 └── uv.lock
 ```
+
+The main DI boundary lives in `app/dependencies/`: request handlers resolve shared infrastructure from FastAPI, while the evaluation service passes the same HTTP client into the LangGraph state for non-route nodes.
 
 ---
 
