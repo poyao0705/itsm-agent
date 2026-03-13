@@ -5,6 +5,7 @@ Builds the LangGraph StateGraph for the change management workflow.
 """
 
 from langgraph.graph import StateGraph, START, END
+from langgraph.types import RetryPolicy
 
 from app.services.change_management.state import AgentState
 from app.services.change_management.nodes import (
@@ -15,6 +16,23 @@ from app.services.change_management.nodes import (
     policy_rule_analysis,
     post_pr_comment,
 )
+from app.services.change_management.nodes.analysis import is_retryable_jira_error
+from app.services.change_management.nodes.pr_io import is_retryable_github_error
+
+
+FETCH_PR_INFO_RETRY_POLICY = RetryPolicy(
+    initial_interval=1.0,
+    max_attempts=3,
+    max_interval=8.0,
+    retry_on=is_retryable_github_error,
+)
+
+ANALYZE_JIRA_TICKET_RETRY_POLICY = RetryPolicy(
+    initial_interval=1.0,
+    max_attempts=3,
+    max_interval=8.0,
+    retry_on=is_retryable_jira_error,
+)
 
 
 # 1. Initialize Graph with context schema
@@ -22,8 +40,16 @@ workflow = StateGraph(AgentState)
 
 # 2. Add Nodes
 workflow.add_node("read_pr_from_webhook", read_pr_from_webhook)
-workflow.add_node("fetch_pr_info", fetch_pr_info)
-workflow.add_node("analyze_jira_ticket_number", analyze_jira_ticket_number)
+workflow.add_node(
+    "fetch_pr_info",
+    fetch_pr_info,
+    retry_policy=FETCH_PR_INFO_RETRY_POLICY,
+)
+workflow.add_node(
+    "analyze_jira_ticket_number",
+    analyze_jira_ticket_number,
+    retry_policy=ANALYZE_JIRA_TICKET_RETRY_POLICY,
+)
 workflow.add_node("jira_to_code_llm_analysis", jira_to_code_llm_analysis)
 workflow.add_node("policy_rule_analysis", policy_rule_analysis)
 workflow.add_node("post_pr_comment", post_pr_comment)

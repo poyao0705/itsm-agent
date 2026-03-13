@@ -24,6 +24,18 @@ _NODE_JIRA_TICKET = "analyze_jira_ticket_number"
 _NODE_POLICY = "policy_rule_analysis"
 
 
+def is_retryable_jira_error(exc: Exception) -> bool:
+    """Return whether a JIRA API error is worth retrying."""
+    if isinstance(exc, httpx.RequestError):
+        return True
+
+    if isinstance(exc, httpx.HTTPStatusError):
+        status_code = exc.response.status_code if exc.response is not None else None
+        return status_code == 429 or (status_code is not None and status_code >= 500)
+
+    return False
+
+
 def _get_http_client(state: AgentState) -> httpx.AsyncClient:
     """Return the HTTP client injected into graph state."""
     client = state.http_client
@@ -76,18 +88,13 @@ async def analyze_jira_ticket_number(state: AgentState) -> dict:
     )
     try:
         jira_ticket_metadata = await jira_client_instance.get_issue(jira_ticket_number)
-    except httpx.HTTPError as e:
-        logger.error("Failed to fetch JIRA ticket metadata: %s", e)
-        results.append(
-            AnalysisResultCreate(
-                node_name=_NODE_JIRA_TICKET,
-                reason_code="JIRA_API_ERROR",
-                summary="[HIGH RISK] Failed to fetch JIRA ticket from JIRA API.",
-                risk_level="HIGH",
-                details=details,
-            )
+    except httpx.HTTPError as exc:
+        logger.warning(
+            "Failed to fetch JIRA ticket metadata for %s: %s",
+            jira_ticket_number,
+            exc,
         )
-        return {"risk_level": "HIGH", "analysis_results": results}
+        raise
 
     # Record successful JIRA ticket validation
     results.append(
@@ -126,7 +133,7 @@ def policy_rule_analysis(state: AgentState) -> dict:
     except (FileNotFoundError, yaml.YAMLError) as e:
         logger.error("Failed to load or parse policy: %s", e)
         return {}
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         logger.error("Unexpected error loading policy: %s", e, exc_info=True)
         return {}
 

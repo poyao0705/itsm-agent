@@ -1,12 +1,18 @@
 """Tests for change management graph nodes: utils and pr_io."""
 
+import httpx
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.change_management.nodes.utils import make_result
+from app.services.change_management.nodes.analysis import (
+    analyze_jira_ticket_number,
+    is_retryable_jira_error,
+)
 from app.services.change_management.nodes.pr_io import (
     read_pr_from_webhook,
     fetch_pr_info,
+    is_retryable_github_error,
 )
 from app.services.change_management.state import AgentState
 from app.db.models.analysis_result import AnalysisResultCreate
@@ -204,18 +210,7 @@ async def test_fetch_pr_info_uses_installation_token(mock_http_client):
 
 
 @pytest.mark.asyncio
-async def test_fetch_pr_info_continues_if_token_fetch_fails(mock_http_client):
-    """A token fetch failure should log a warning but still attempt the PR fetch."""
-    pr_data = {
-        "title": "PR",
-        "body": "",
-        "head": {"sha": "s"},
-        "base": {"sha": "b"},
-        "additions": 0,
-        "deletions": 0,
-    }
-    mock_http_client.get.side_effect = _pr_get_side_effects(pr_data)
-
+async def test_fetch_pr_info_raises_if_token_fetch_fails(mock_http_client):
     state = AgentState(
         owner="o",
         repo="r",
@@ -226,9 +221,62 @@ async def test_fetch_pr_info_continues_if_token_fetch_fails(mock_http_client):
 
     with patch(
         "app.services.change_management.nodes.pr_io.get_access_token",
-        AsyncMock(side_effect=Exception("token error")),
+        AsyncMock(side_effect=httpx.ConnectError("token error")),
     ):
-        result = await fetch_pr_info(state)
+        with pytest.raises(httpx.ConnectError, match="token error"):
+            await fetch_pr_info(state)
 
-    # Should still have pr_info with token=None (no Authorization header set)
-    assert "pr_info" in result
+
+@pytest.mark.parametrize(
+    ("status_code", "expected"),
+    [(429, True), (500, True), (404, False)],
+)
+def test_is_retryable_github_error_http_status(status_code: int, expected: bool):
+    response = MagicMock(spec=httpx.Response)
+    response.status_code = status_code
+    exc = httpx.HTTPStatusError("boom", request=MagicMock(), response=response)
+
+    assert is_retryable_github_error(exc) is expected
+
+
+def test_is_retryable_github_error_request_error():
+    assert is_retryable_github_error(httpx.ConnectError("boom")) is True
+
+
+# ===========================================================================
+# analyze_jira_ticket_number
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_analyze_jira_ticket_number_raises_if_jira_fetch_fails(mock_http_client):
+    state = AgentState(
+        pr_info={"pr_title": "ABC-123 Implement retry policy"},
+        http_client=mock_http_client,
+    )
+
+    jira_client_instance = MagicMock()
+    jira_client_instance.get_issue = AsyncMock(side_effect=httpx.ConnectError("boom"))
+
+    with patch(
+        "app.services.change_management.nodes.analysis.jira_client.JiraClient",
+        return_value=jira_client_instance,
+    ):
+        with pytest.raises(httpx.ConnectError, match="boom"):
+            await analyze_jira_ticket_number(state)
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected"),
+    [(429, True), (503, True), (400, False)],
+)
+def test_is_retryable_jira_error_http_status(status_code: int, expected: bool):
+    response = MagicMock(spec=httpx.Response)
+    response.status_code = status_code
+    exc = httpx.HTTPStatusError("boom", request=MagicMock(), response=response)
+
+    assert is_retryable_jira_error(exc) is expected
+
+
+def test_is_retryable_jira_error_request_error():
+    assert is_retryable_jira_error(httpx.ConnectError("boom")) is True

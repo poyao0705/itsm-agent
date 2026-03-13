@@ -13,6 +13,18 @@ from app.integrations.github import GitHubClient, get_access_token
 logger = get_logger(__name__)
 
 
+def is_retryable_github_error(exc: Exception) -> bool:
+    """Return whether a GitHub API error is worth retrying."""
+    if isinstance(exc, httpx.RequestError):
+        return True
+
+    if isinstance(exc, httpx.HTTPStatusError):
+        status_code = exc.response.status_code if exc.response is not None else None
+        return status_code == 429 or (status_code is not None and status_code >= 500)
+
+    return False
+
+
 def _get_http_client(state: AgentState) -> httpx.AsyncClient:
     """Return the HTTP client injected into graph state."""
     client = state.http_client
@@ -71,12 +83,24 @@ async def fetch_pr_info(state: AgentState) -> dict:
     if state.installation_id:
         try:
             token = await get_access_token(client, state.installation_id)
-        except Exception as e:
-            logger.error("Failed to get installation token: %s", e)
+        except httpx.HTTPError as exc:
+            logger.warning("Failed to get installation token: %s", exc)
+            raise
 
-    pr_info = await GitHubClient(client, token).fetch_pr_info(
-        state.owner, state.repo, state.pr_number, include_diff=True
-    )
+    try:
+        pr_info = await GitHubClient(client, token).fetch_pr_info(
+            state.owner, state.repo, state.pr_number, include_diff=True
+        )
+    except httpx.HTTPError as exc:
+        logger.warning(
+            "Failed to fetch PR info for %s/%s#%s: %s",
+            state.owner,
+            state.repo,
+            state.pr_number,
+            exc,
+        )
+        raise
+
     return {"pr_info": pr_info}
 
 
@@ -105,7 +129,7 @@ async def post_pr_comment(state: AgentState) -> dict:
                 comment,
             )
             return {"pr_url": pr_url, "comment": "Commented on PR"}
-        except Exception as e:
-            return {"pr_url": pr_url, "comment": f"Failed to comment: {e}"}
+        except httpx.HTTPError as exc:
+            return {"pr_url": pr_url, "comment": f"Failed to comment: {exc}"}
 
     return {"pr_url": pr_url, "comment": "No installation ID, skipped comment"}
