@@ -7,6 +7,7 @@ Builds the LangGraph StateGraph for the change management workflow.
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import RetryPolicy
 
+from app.services.change_management.context import ChangeManagementContext
 from app.services.change_management.state import AgentState
 from app.services.change_management.nodes import (
     read_pr_from_webhook,
@@ -36,7 +37,7 @@ ANALYZE_JIRA_TICKET_RETRY_POLICY = RetryPolicy(
 
 
 # 1. Initialize Graph with context schema
-workflow = StateGraph(AgentState)
+workflow = StateGraph(AgentState, context_schema=ChangeManagementContext)
 
 # 2. Add Nodes
 workflow.add_node("read_pr_from_webhook", read_pr_from_webhook)

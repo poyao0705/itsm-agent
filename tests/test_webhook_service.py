@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
+from fastapi.encoders import jsonable_encoder
 
 from app.api.endpoints.github import handle_github_webhook
 
@@ -100,7 +101,11 @@ async def test_handle_webhook_non_pr_event_is_ignored():
 @pytest.mark.asyncio
 async def test_handle_webhook_pull_request_returns_state():
     body = _pr_body(action="opened")
-    fake_state = {"risk_level": "LOW", "analysis_results": []}
+    fake_state = {
+        "risk_level": "LOW",
+        "analysis_results": [],
+        "http_client": object(),
+    }
 
     mock_service = AsyncMock()
     mock_service.run_evaluation_workflow = AsyncMock(return_value=fake_state)
@@ -114,7 +119,11 @@ async def test_handle_webhook_pull_request_returns_state():
         )
 
     assert result["message"] == "PR processed"
-    assert result["state"] == fake_state
+    assert result["state"] == {"risk_level": "LOW", "analysis_results": []}
+    assert jsonable_encoder(result) == {
+        "message": "PR processed",
+        "state": {"risk_level": "LOW", "analysis_results": []},
+    }
 
 
 @pytest.mark.asyncio

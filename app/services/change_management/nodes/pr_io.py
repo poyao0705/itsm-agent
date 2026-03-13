@@ -5,8 +5,10 @@ These nodes handle reading from webhooks, fetching PR info, and posting comments
 """
 
 import httpx
+from langgraph.runtime import Runtime
 
 from app.core.logging import get_logger
+from app.services.change_management.context import ChangeManagementContext
 from app.services.change_management.state import AgentState
 from app.integrations.github import GitHubClient, get_access_token
 
@@ -25,12 +27,12 @@ def is_retryable_github_error(exc: Exception) -> bool:
     return False
 
 
-def _get_http_client(state: AgentState) -> httpx.AsyncClient:
-    """Return the HTTP client injected into graph state."""
-    client = state.http_client
-    if client is None:
-        raise RuntimeError("http_client not provided in graph state")
-    return client
+def _get_http_client(runtime: Runtime[ChangeManagementContext]) -> httpx.AsyncClient:
+    """Return the HTTP client injected into graph runtime context."""
+    context = runtime.context
+    if context is None:
+        raise RuntimeError("runtime context not provided")
+    return context.http_client
 
 
 async def read_pr_from_webhook(state: AgentState) -> dict:
@@ -68,7 +70,9 @@ async def read_pr_from_webhook(state: AgentState) -> dict:
     }
 
 
-async def fetch_pr_info(state: AgentState) -> dict:
+async def fetch_pr_info(
+    state: AgentState, runtime: Runtime[ChangeManagementContext]
+) -> dict:
     """
     Fetch PR info via GitHub API and store in pr_evidence.
     """
@@ -76,7 +80,7 @@ async def fetch_pr_info(state: AgentState) -> dict:
         logger.warning("Missing required PR identifiers, skipping fetch.")
         return {}
 
-    client = _get_http_client(state)
+    client = _get_http_client(runtime)
 
     # Use the installation token if available
     token = None
@@ -104,7 +108,9 @@ async def fetch_pr_info(state: AgentState) -> dict:
     return {"pr_info": pr_info}
 
 
-async def post_pr_comment(state: AgentState) -> dict:
+async def post_pr_comment(
+    state: AgentState, runtime: Runtime[ChangeManagementContext]
+) -> dict:
     """
     Node to post a comment on the PR.
     """
@@ -114,7 +120,7 @@ async def post_pr_comment(state: AgentState) -> dict:
 
     comment = "\n".join([res.summary for res in analysis_results])
 
-    client = _get_http_client(state)
+    client = _get_http_client(runtime)
 
     # We want to post a comment.
     if state.installation_id:

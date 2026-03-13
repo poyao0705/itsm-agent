@@ -5,8 +5,10 @@ import fnmatch
 import os
 import yaml
 import httpx
+from langgraph.runtime import Runtime
 
 from app.core.logging import get_logger
+from app.services.change_management.context import ChangeManagementContext
 from app.services.change_management.state import AgentState
 from app.db.models.analysis_result import AnalysisResultCreate
 from app.services.change_management.policy.loader import (
@@ -36,15 +38,17 @@ def is_retryable_jira_error(exc: Exception) -> bool:
     return False
 
 
-def _get_http_client(state: AgentState) -> httpx.AsyncClient:
-    """Return the HTTP client injected into graph state."""
-    client = state.http_client
-    if client is None:
-        raise RuntimeError("http_client not provided in graph state")
-    return client
+def _get_http_client(runtime: Runtime[ChangeManagementContext]) -> httpx.AsyncClient:
+    """Return the HTTP client injected into graph runtime context."""
+    context = runtime.context
+    if context is None:
+        raise RuntimeError("runtime context not provided")
+    return context.http_client
 
 
-async def analyze_jira_ticket_number(state: AgentState) -> dict:
+async def analyze_jira_ticket_number(
+    state: AgentState, runtime: Runtime[ChangeManagementContext]
+) -> dict:
     """Analyze the JIRA ticket number in the PR title and validate via JIRA API."""
     if not state.pr_info:
         logger.warning("Missing pr_info, skipping JIRA analysis.")
@@ -81,7 +85,7 @@ async def analyze_jira_ticket_number(state: AgentState) -> dict:
 
     # Validate ticket via JIRA API
     jira_client_instance = jira_client.JiraClient(
-        client=_get_http_client(state),
+        client=_get_http_client(runtime),
         base_url=settings.JIRA_BASE_URL,
         email=settings.JIRA_EMAIL,
         api_token=settings.JIRA_API_TOKEN,

@@ -146,8 +146,8 @@ class EvaluationService:
             result = await change_management_graph.ainvoke(
                 {
                     "webhook_payload": webhook_payload,
-                    "http_client": self.http_client,
                 },  # type: ignore[arg-type]
+                context={"http_client": self.http_client},
             )
 
             # 3. Persist analysis results from final state

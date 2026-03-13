@@ -159,7 +159,8 @@ async def test_run_evaluation_workflow_reraises_on_graph_error(mock_http_client)
             await svc.run_evaluation_workflow(payload)
 
         mock_graph.ainvoke.assert_awaited_once_with(
-            {"webhook_payload": payload, "http_client": mock_http_client}
+            {"webhook_payload": payload},
+            context={"http_client": mock_http_client},
         )
         mark_error.assert_awaited_once_with("uuid-123", "graph boom")
 
@@ -196,7 +197,8 @@ async def test_run_evaluation_workflow_success(mock_http_client):
 
         assert result == fake_state
         mock_graph.ainvoke.assert_awaited_once_with(
-            {"webhook_payload": payload, "http_client": mock_http_client}
+            {"webhook_payload": payload},
+            context={"http_client": mock_http_client},
         )
         mock_persist.assert_called_once_with("uuid-456", fake_state)
         mock_finalize.assert_called_once_with("uuid-456", fake_state)

@@ -1,13 +1,10 @@
-"""
-Agent state model for the Change Management Agent.
+"""Agent state model for the Change Management Agent."""
 
-Pure graph state — no service-layer imports.
-"""
-
-from sqlmodel import SQLModel, Field
-from typing import Optional, List, Annotated, Dict, Any
 import operator
 import uuid
+from typing import Annotated, Any, Dict, List, Optional
+
+from sqlmodel import Field, SQLModel
 
 from app.db.models.analysis_result import AnalysisResultCreate
 from app.services.change_management.policy.priority import get_default_risk_priority
@@ -61,10 +58,6 @@ class AgentState(SQLModel):
     )
     installation_id: Optional[int] = Field(
         default=None, description="The GitHub App installation ID."
-    )
-    http_client: Optional[Any] = Field(
-        default=None,
-        description="Shared HTTP client injected at graph invocation time.",
     )
     analysis_results: Annotated[List[AnalysisResultCreate], operator.add] = Field(
         default_factory=list, description="The analysis results of the agent."

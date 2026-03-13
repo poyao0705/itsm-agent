@@ -2,8 +2,10 @@
 
 import httpx
 import pytest
+from langgraph.runtime import Runtime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from app.services.change_management.context import ChangeManagementContext
 from app.services.change_management.nodes.utils import make_result
 from app.services.change_management.nodes.analysis import (
     analyze_jira_ticket_number,
@@ -65,8 +67,14 @@ def test_make_result_empty_details():
 # ===========================================================================
 
 
-def _make_state(payload: dict | None = None, http_client=None) -> AgentState:
-    return AgentState(webhook_payload=payload, http_client=http_client)
+def _make_state(payload: dict | None = None) -> AgentState:
+    return AgentState(webhook_payload=payload)
+
+
+def _make_runtime(
+    client: MagicMock | httpx.AsyncClient,
+) -> Runtime[ChangeManagementContext]:
+    return Runtime(context=ChangeManagementContext(http_client=client))
 
 
 @pytest.mark.asyncio
@@ -135,7 +143,9 @@ async def test_read_pr_from_webhook_uses_full_name_fallback():
 @pytest.mark.asyncio
 async def test_fetch_pr_info_missing_identifiers_returns_empty():
     state = AgentState()  # no owner/repo/pr_number
-    result = await fetch_pr_info(state)
+    result = await fetch_pr_info(
+        state, _make_runtime(MagicMock(spec=httpx.AsyncClient))
+    )
     assert result == {}
 
 
@@ -166,15 +176,13 @@ async def test_fetch_pr_info_calls_github_client(mock_http_client):
     }
     mock_http_client.get.side_effect = _pr_get_side_effects(pr_data)
 
-    state = AgentState(
-        owner="org", repo="repo", pr_number=1, http_client=mock_http_client
-    )
+    state = AgentState(owner="org", repo="repo", pr_number=1)
 
     # No installation_id → token is None, no auth call
     with patch(
         "app.services.change_management.nodes.pr_io.get_access_token"
     ) as mock_token:
-        result = await fetch_pr_info(state)
+        result = await fetch_pr_info(state, _make_runtime(mock_http_client))
 
     mock_token.assert_not_called()
     assert result["pr_info"]["pr_title"] == "My PR"
@@ -197,14 +205,13 @@ async def test_fetch_pr_info_uses_installation_token(mock_http_client):
         repo="repo",
         pr_number=2,
         installation_id=555,
-        http_client=mock_http_client,
     )
 
     with patch(
         "app.services.change_management.nodes.pr_io.get_access_token",
         AsyncMock(return_value="inst-token"),
     ):
-        result = await fetch_pr_info(state)
+        result = await fetch_pr_info(state, _make_runtime(mock_http_client))
 
     assert result["pr_info"]["pr_title"] == "Secure PR"
 
@@ -216,7 +223,6 @@ async def test_fetch_pr_info_raises_if_token_fetch_fails(mock_http_client):
         repo="r",
         pr_number=9,
         installation_id=123,
-        http_client=mock_http_client,
     )
 
     with patch(
@@ -224,7 +230,7 @@ async def test_fetch_pr_info_raises_if_token_fetch_fails(mock_http_client):
         AsyncMock(side_effect=httpx.ConnectError("token error")),
     ):
         with pytest.raises(httpx.ConnectError, match="token error"):
-            await fetch_pr_info(state)
+            await fetch_pr_info(state, _make_runtime(mock_http_client))
 
 
 @pytest.mark.parametrize(
@@ -252,7 +258,6 @@ def test_is_retryable_github_error_request_error():
 async def test_analyze_jira_ticket_number_raises_if_jira_fetch_fails(mock_http_client):
     state = AgentState(
         pr_info={"pr_title": "ABC-123 Implement retry policy"},
-        http_client=mock_http_client,
     )
 
     jira_client_instance = MagicMock()
@@ -263,7 +268,7 @@ async def test_analyze_jira_ticket_number_raises_if_jira_fetch_fails(mock_http_c
         return_value=jira_client_instance,
     ):
         with pytest.raises(httpx.ConnectError, match="boom"):
-            await analyze_jira_ticket_number(state)
+            await analyze_jira_ticket_number(state, _make_runtime(mock_http_client))
 
 
 @pytest.mark.parametrize(
