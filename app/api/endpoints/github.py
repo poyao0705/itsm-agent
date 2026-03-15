@@ -18,11 +18,6 @@ router = APIRouter()
 EvaluationServiceDep = Annotated[EvaluationService, Depends(get_evaluation_service)]
 
 
-def _serialize_workflow_state(state: dict) -> dict:
-    """Drop runtime-only fields before returning workflow state in an API response."""
-    return {key: value for key, value in state.items() if key not in {"http_client"}}
-
-
 @router.post("/webhook")
 async def handle_github_webhook(
     request: Request,
@@ -67,7 +62,7 @@ async def handle_github_webhook(
             )
             return {
                 "message": "PR processed",
-                "state": _serialize_workflow_state(result),
+                "state": result,
             }
         except Exception as e:
             logger.error("Evaluation workflow failed: %s", str(e), exc_info=True)
