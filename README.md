@@ -43,40 +43,38 @@ Demo site: [ITSM Agent](https://itsm-agent.site)
 
 ## Architecture
 
-```
-GitHub Webhook (pull_request)
-        │
-        ▼
-┌───────────────────────┐
-│  FastAPI Application  │
-│  POST /api/v1/github  │
-│       /webhook        │
-└──────────┬────────────┘
-           │  verify HMAC signature
-           ▼
-┌───────────────────────────────────────────────────────┐
-│             LangGraph State Machine                   │
-│                                                       │
-│  read_pr_from_webhook                                 │
-│       ▼                                               │
-│  fetch_pr_info  (GitHub REST API)                     │
-│       ▼                                               │
-│  analyze_jira_ticket_number  (JIRA API validation)    │
-│       ▼                                               │
-│  ┌────────────────────────┬──────────────────────┐    │
-│  │ jira_to_code_llm       │ policy_rule_analysis │    │
-│  │ (OpenAI semantic audit)│ (YAML policy engine) │    │
-│  └────────────┬───────────┴──────────┬───────────┘    │
-│               ▼                      ▼                │
-│              post_pr_comment  (GitHub REST API)       │
-└──────────────────┬────────────────────────────────────┘
-                   │
-                   ▼
-┌──────────────────────┐      ┌─────────────────────┐
-│   PostgreSQL (async) │◄────►│  Web Dashboard      │
-│   evaluation_run     │      │  HTMX + SSE         │
-│   analysis_result    │      │  /evaluations       │
-└──────────────────────┘      └─────────────────────┘
+```mermaid
+flowchart TD
+    A["GitHub Webhook<br/>(pull_request)"]
+        --> B["FastAPI Application<br/>POST /api/v1/github/webhook"]
+
+    B --> C["Verify HMAC Signature"]
+
+    C --> D
+
+    subgraph D["LangGraph State Machine"]
+        D1["read_pr_from_webhook"]
+        D2["fetch_pr_info<br/>(GitHub REST API)"]
+        D3["analyze_jira_ticket_number<br/>(JIRA API validation)"]
+
+        D4["jira_to_code_llm<br/>(OpenAI semantic audit)"]
+        D5["policy_rule_analysis<br/>(YAML policy engine)"]
+
+        D6["post_pr_comment<br/>(GitHub REST API)"]
+
+        D1 --> D2
+        D2 --> D3
+
+        D3 --> D4
+        D3 --> D5
+
+        D4 --> D6
+        D5 --> D6
+    end
+
+    D --> E["PostgreSQL (async)<br/>evaluation_run<br/>analysis_result"]
+
+    E <--> F["Web Dashboard<br/>HTMX + SSE<br/>/evaluations"]
 ```
 
 ### Shared Dependency Flow
